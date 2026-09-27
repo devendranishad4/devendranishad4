@@ -127,7 +127,7 @@ public final class StoryDirector {
         if(t==9160) LightingController.pulse(player,true);
 
         // 11:53 — something starts pacing with the player in the darkness.
-        if(t==9600) play(level,behindPlayer(player,5).blockPosition(),Train31Mod.METAL_KNOCKS.get(),1.25f,0.72f);
+        if(t==9600) play(level,BlockPos.containing(behindPlayer(player,5)),Train31Mod.METAL_KNOCKS.get(),1.25f,0.72f);
 
         // 11:53:30 — first distant train horn from the exact real tunnel marker.
         if(t==10200) play(level,SceneSetup.tunnel(player),Train31Mod.TRAIN_HORN.get(),2.0f,0.74f);
