@@ -9,7 +9,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.ArmorStand;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -57,20 +57,17 @@ public final class StoryDirector {
 
         if(t==0) say(player,"§7[11:45 PM] Night shift started. Platform 3 is out of service.");
 
-        // REAL visible flicker effect: short pulses of darkness + electrical clicks.
         if(t>=180 && t<=300 && t%20==0){
             player.addEffect(new MobEffectInstance(MobEffects.DARKNESS,10,0,false,false));
             sound(level,player.blockPosition(),SoundEvents.LEVER_CLICK,0.75f);
         }
         if(t==180) say(player,"§eThe station lights begin to flicker...");
 
-        // Spoken female-style PA asset generated into the mod during build.
         if(t==400){
             sound(level,s.origin,Train31Mod.PA_FEMALE.get(),1.0f);
             say(player,"§fPA: §7Attention please. The last service has ended. Please leave the station.");
         }
 
-        // Fog starts thin, then becomes denser and denser.
         if(t>=600 && t<1000 && t%10==0) fog(level,player,1);
         if(t>=1000 && t<1400 && t%8==0) fog(level,player,2);
         if(t>=1400 && t<1800 && t%5==0) fog(level,player,3);
@@ -78,7 +75,6 @@ public final class StoryDirector {
         if(t==1000) say(player,"§7The fog is getting thicker. The far end of the station disappears.");
         if(t==1400) say(player,"§8The fog is now almost impossible to see through.");
 
-        // At peak fog, move the player to the hidden CCTV/security room.
         if(t==1800){
             player.removeEffect(MobEffects.DARKNESS);
             StationBuilder.teleportToCctv(player);
@@ -86,7 +82,6 @@ public final class StoryDirector {
             say(player,"§bCCTV SECURITY ROOM §7— You don't remember walking in here.");
         }
 
-        // Scripted visual CCTV horror: the silhouette moves closer on the physical monitor.
         if(t==2000){ StationBuilder.setCctvFeed(level,1); sound(level,StationBuilder.CCTV_ROOM,SoundEvents.NOTE_BLOCK_HAT.value(),0.6f); say(player,"§bCAM 03: §fMovement detected on Platform 3."); }
         if(t==2200){ StationBuilder.setCctvFeed(level,2); sound(level,StationBuilder.CCTV_ROOM,SoundEvents.NOTE_BLOCK_HAT.value(),0.5f); say(player,"§7The figure is closer on the monitor."); }
         if(t==2400){ StationBuilder.setCctvFeed(level,3); sound(level,StationBuilder.CCTV_ROOM,SoundEvents.NOTE_BLOCK_BASS.value(),0.5f); say(player,"§8It is standing directly in front of Camera 03."); }
@@ -98,7 +93,6 @@ public final class StoryDirector {
             say(player,"§7The station is back... but the fog is gone.");
         }
 
-        // Peaceful-safe real-world shadow actor on the platform.
         if(t==3200){ spawnActor(level,s,"shadow",s.origin.offset(0,0,38)); say(player,"§8The same figure from Camera 03 is now at the far end of Platform 3."); }
         if(t==4300){ sound(level,s.origin.offset(4,-1,12),SoundEvents.IRON_DOOR_CLOSE,0.55f); say(player,"§7...knock... knock... from below the platform."); }
         if(t==5400){ say(player,"§bCCTV CAM 03: §fMotion detected again."); moveActor(level,s.shadow,s.origin.offset(0,0,25)); }
