@@ -16,6 +16,8 @@ public final class SceneSetup {
     private static final String PLATFORM = "train31_manual_platform";
     private static final String RAIL = "train31_manual_rail";
     private static final String TUNNEL = "train31_manual_tunnel";
+    private static final String MAP_TRAIN = "train31_manual_map_train";
+    private static final String MAP_TRAIN_YAW = "train31_manual_map_train_yaw";
 
     private static String camPosKey(int i){ return "train31_manual_cam" + i + "_pos"; }
     private static String camYawKey(int i){ return "train31_manual_cam" + i + "_yaw"; }
@@ -44,13 +46,21 @@ public final class SceneSetup {
     public static void markRail(ServerPlayer p) {
         p.getPersistentData().putLong(RAIL, p.blockPosition().asLong());
         p.getPersistentData().remove("train31_prepared");
-        p.sendSystemMessage(Component.literal("§aTRAIN STOP RAIL saved at " + coord(p.blockPosition())));
+        p.sendSystemMessage(Component.literal("§aTRACK REFERENCE saved at " + coord(p.blockPosition())));
     }
 
     public static void markTunnel(ServerPlayer p) {
         p.getPersistentData().putLong(TUNNEL, p.blockPosition().asLong());
         p.getPersistentData().remove("train31_prepared");
-        p.sendSystemMessage(Component.literal("§aTUNNEL APPROACH saved at " + coord(p.blockPosition())));
+        p.sendSystemMessage(Component.literal("§aTUNNEL SOUND DIRECTION saved at " + coord(p.blockPosition())));
+    }
+
+    /** Stand inside the EXISTING block-built subway train and face along the carriage before saving. */
+    public static void markMapTrain(ServerPlayer p) {
+        p.getPersistentData().putLong(MAP_TRAIN, p.blockPosition().asLong());
+        p.getPersistentData().putFloat(MAP_TRAIN_YAW, p.getYRot());
+        p.getPersistentData().remove("train31_prepared");
+        p.sendSystemMessage(Component.literal("§aEXISTING MAP TRAIN selected at " + coord(p.blockPosition()) + ". This physical train is now Train 31."));
     }
 
     /** Stand where the camera should be, look exactly where it should look, then save. */
@@ -73,14 +83,15 @@ public final class SceneSetup {
                 && p.getPersistentData().contains(PLATFORM)
                 && p.getPersistentData().contains(RAIL)
                 && p.getPersistentData().contains(TUNNEL)
+                && p.getPersistentData().contains(MAP_TRAIN)
                 && hasCamera(p,1) && hasCamera(p,2) && hasCamera(p,3) && hasCamera(p,4);
     }
 
-    /** Reject the exact mistake from the previous build: subway markers accidentally saved at the outside entrance. */
+    /** Reject markers accidentally saved outside or far from the station scene. */
     public static boolean valid(ServerPlayer p) {
         if(!complete(p)) return false;
         boolean ok=true;
-        BlockPos st=start(p), ct=cctv(p), pl=platform(p), ra=rail(p), tu=tunnel(p);
+        BlockPos st=start(p), ct=cctv(p), pl=platform(p), ra=rail(p), tu=tunnel(p), mt=mapTrain(p);
 
         if(d2(st,pl) < 100){
             p.sendSystemMessage(Component.literal("§cSetup error: PLATFORM is too close to START. PLATFORM must be inside/down in the subway.")); ok=false;
@@ -89,10 +100,13 @@ public final class SceneSetup {
             p.sendSystemMessage(Component.literal("§cSetup error: RAIL must be beside the PLATFORM on the subway track.")); ok=false;
         }
         if(Math.abs(tu.getY()-ra.getY()) > 5 || d2(tu,ra) < 100){
-            p.sendSystemMessage(Component.literal("§cSetup error: TUNNEL must be farther down the SAME rail, not at the entrance/stop.")); ok=false;
+            p.sendSystemMessage(Component.literal("§cSetup error: TUNNEL must be farther down the same track direction.")); ok=false;
         }
         if(d2(st,ra) < 100 || d2(st,tu) < 100){
-            p.sendSystemMessage(Component.literal("§cSetup error: RAIL/TUNNEL are still near the outside START. Train 31 would spawn outside.")); ok=false;
+            p.sendSystemMessage(Component.literal("§cSetup error: RAIL/TUNNEL are still near the outside START.")); ok=false;
+        }
+        if(Math.abs(mt.getY()-pl.getY()) > 6 || d2(mt,pl) > 2500){
+            p.sendSystemMessage(Component.literal("§cSetup error: MAPTRAIN must be inside the existing subway train beside this platform.")); ok=false;
         }
         if(d2(ct,pl) > 14400){
             p.sendSystemMessage(Component.literal("§cSetup error: CCTV ROOM looks too far from the subway platform.")); ok=false;
@@ -113,6 +127,8 @@ public final class SceneSetup {
     public static BlockPos platform(ServerPlayer p) { return BlockPos.of(p.getPersistentData().getLong(PLATFORM)); }
     public static BlockPos rail(ServerPlayer p) { return BlockPos.of(p.getPersistentData().getLong(RAIL)); }
     public static BlockPos tunnel(ServerPlayer p) { return BlockPos.of(p.getPersistentData().getLong(TUNNEL)); }
+    public static BlockPos mapTrain(ServerPlayer p) { return BlockPos.of(p.getPersistentData().getLong(MAP_TRAIN)); }
+    public static float mapTrainYaw(ServerPlayer p) { return p.getPersistentData().getFloat(MAP_TRAIN_YAW); }
     public static float startYaw(ServerPlayer p) { return p.getPersistentData().getFloat(START_YAW); }
 
     public static BlockPos cameraPos(ServerPlayer p, int index) { return BlockPos.of(p.getPersistentData().getLong(camPosKey(index))); }
@@ -130,7 +146,8 @@ public final class SceneSetup {
         String c = p.getPersistentData().contains(PLATFORM) ? "§aSET" : "§cMISSING";
         String d = p.getPersistentData().contains(RAIL) ? "§aSET" : "§cMISSING";
         String e = p.getPersistentData().contains(TUNNEL) ? "§aSET" : "§cMISSING";
-        p.sendSystemMessage(Component.literal("§eTrain 31 setup §7| §fSTART: " + a + " §7| §fCCTV: " + b + " §7| §fPLATFORM: " + c + " §7| §fRAIL: " + d + " §7| §fTUNNEL: " + e));
+        String f = p.getPersistentData().contains(MAP_TRAIN) ? "§aSET" : "§cMISSING";
+        p.sendSystemMessage(Component.literal("§eTrain 31 setup §7| §fSTART: " + a + " §7| §fCCTV: " + b + " §7| §fPLATFORM: " + c + " §7| §fRAIL: " + d + " §7| §fTUNNEL: " + e + " §7| §fMAPTRAIN: " + f));
         p.sendSystemMessage(Component.literal("§fCAM1: " + (hasCamera(p,1)?"§aSET":"§cMISSING") + " §7| §fCAM2: " + (hasCamera(p,2)?"§aSET":"§cMISSING") + " §7| §fCAM3: " + (hasCamera(p,3)?"§aSET":"§cMISSING") + " §7| §fCAM4: " + (hasCamera(p,4)?"§aSET":"§cMISSING")));
 
         if(p.getPersistentData().contains(START)) p.sendSystemMessage(Component.literal("§7START " + coord(start(p))));
@@ -138,9 +155,10 @@ public final class SceneSetup {
         if(p.getPersistentData().contains(PLATFORM)) p.sendSystemMessage(Component.literal("§7PLATFORM " + coord(platform(p))));
         if(p.getPersistentData().contains(RAIL)) p.sendSystemMessage(Component.literal("§7RAIL " + coord(rail(p))));
         if(p.getPersistentData().contains(TUNNEL)) p.sendSystemMessage(Component.literal("§7TUNNEL " + coord(tunnel(p))));
+        if(p.getPersistentData().contains(MAP_TRAIN)) p.sendSystemMessage(Component.literal("§7MAPTRAIN " + coord(mapTrain(p))));
         for(int i=1;i<=4;i++) if(hasCamera(p,i)) p.sendSystemMessage(Component.literal("§7CAM"+i+" "+coord(cameraPos(p,i))));
 
-        if (!complete(p)) p.sendSystemMessage(Component.literal("§7One-time setup: set start | cctv | platform | rail | tunnel | cam1 | cam2 | cam3 | cam4"));
+        if (!complete(p)) p.sendSystemMessage(Component.literal("§7One-time setup: set start | cctv | platform | rail | tunnel | maptrain | cam1 | cam2 | cam3 | cam4"));
         else valid(p);
     }
 
@@ -152,6 +170,8 @@ public final class SceneSetup {
         p.getPersistentData().remove(PLATFORM);
         p.getPersistentData().remove(RAIL);
         p.getPersistentData().remove(TUNNEL);
+        p.getPersistentData().remove(MAP_TRAIN);
+        p.getPersistentData().remove(MAP_TRAIN_YAW);
         for(int i=1;i<=4;i++){
             p.getPersistentData().remove(camPosKey(i));
             p.getPersistentData().remove(camYawKey(i));
@@ -159,6 +179,8 @@ public final class SceneSetup {
         }
         p.getPersistentData().remove("train31_prepared");
         p.getPersistentData().remove("train31_remote_cam");
+        p.getPersistentData().remove("train31_cctv_active");
+        p.getPersistentData().remove("train31_cctv_current");
         p.sendSystemMessage(Component.literal("§eTrain 31 exact-map setup cleared."));
     }
 
