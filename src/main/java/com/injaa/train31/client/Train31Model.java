@@ -9,7 +9,7 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 
-/** Three-car Japanese commuter-style train model with a visible walk-through carriage interior. */
+/** Five-car Japanese commuter-style train with a visible walk-through carriage interior. */
 public final class Train31Model {
     private final ModelPart body,roof,windows,stripe,doorway,doors,dark,lights,interior,poles;
 
@@ -25,7 +25,8 @@ public final class Train31Model {
         CubeListBuilder doorway=CubeListBuilder.create(), doors=CubeListBuilder.create(), dark=CubeListBuilder.create(), lights=CubeListBuilder.create();
         CubeListBuilder interior=CubeListBuilder.create(), poles=CubeListBuilder.create();
 
-        int[] centers={-152,0,152};
+        // Five cars, each about 8.75 blocks long. Total train is roughly 47 blocks.
+        int[] centers={-304,-152,0,152,304};
         for(int c:centers){
             body.texOffs(0,0).addBox(-26F,8F,c-70F,52F,44F,140F);
             roof.texOffs(0,0).addBox(-25F,3F,c-71F,50F,6F,142F);
@@ -50,26 +51,26 @@ public final class Train31Model {
                 windows.texOffs(0,0).addBox(26.1F,23F,c+d-6F,1F,11F,12F);
             }
 
-            // Interior floor and long side benches, visible through the open doors.
             interior.texOffs(0,0).addBox(-21F,48F,c-62F,42F,3F,124F);
             interior.texOffs(0,0).addBox(-22F,39F,c-58F,8F,8F,116F);
             interior.texOffs(0,0).addBox(14F,39F,c-58F,8F,8F,116F);
-            // Ceiling light strip.
             lights.texOffs(0,0).addBox(-3F,9F,c-57F,6F,1F,114F);
-            // Grab poles along the center aisle.
             for(int z=-48;z<=48;z+=24) poles.texOffs(0,0).addBox(-1F,13F,c+z,2F,34F,2F);
         }
 
-        dark.texOffs(0,0).addBox(-20F,11F,-81F,40F,38F,10F);
-        dark.texOffs(0,0).addBox(-20F,11F,71F,40F,38F,10F);
-        windows.texOffs(0,0).addBox(-18F,14F,-223.0F,36F,18F,1F);
-        windows.texOffs(0,0).addBox(-18F,14F,222.0F,36F,18F,1F);
-        stripe.texOffs(0,0).addBox(-24F,34F,-223.2F,48F,5F,1F);
-        stripe.texOffs(0,0).addBox(-24F,34F,222.2F,48F,5F,1F);
-        lights.texOffs(0,0).addBox(-20F,39F,-223.6F,7F,5F,1F);
-        lights.texOffs(0,0).addBox(13F,39F,-223.6F,7F,5F,1F);
-        lights.texOffs(0,0).addBox(-20F,39F,222.6F,7F,5F,1F);
-        lights.texOffs(0,0).addBox(13F,39F,222.6F,7F,5F,1F);
+        // Flexible dark gangways joining all five cars.
+        int[] joints={-228,-76,76,228};
+        for(int j:joints) dark.texOffs(0,0).addBox(-20F,11F,j-5F,40F,38F,10F);
+
+        // Cab windows, stripe and headlights at both ends.
+        windows.texOffs(0,0).addBox(-18F,14F,-375.0F,36F,18F,1F);
+        windows.texOffs(0,0).addBox(-18F,14F,374.0F,36F,18F,1F);
+        stripe.texOffs(0,0).addBox(-24F,34F,-375.2F,48F,5F,1F);
+        stripe.texOffs(0,0).addBox(-24F,34F,374.2F,48F,5F,1F);
+        lights.texOffs(0,0).addBox(-20F,39F,-375.6F,7F,5F,1F);
+        lights.texOffs(0,0).addBox(13F,39F,-375.6F,7F,5F,1F);
+        lights.texOffs(0,0).addBox(-20F,39F,374.6F,7F,5F,1F);
+        lights.texOffs(0,0).addBox(13F,39F,374.6F,7F,5F,1F);
 
         root.addOrReplaceChild("body",body,PartPose.ZERO); root.addOrReplaceChild("roof",roof,PartPose.ZERO);
         root.addOrReplaceChild("windows",windows,PartPose.ZERO); root.addOrReplaceChild("stripe",stripe,PartPose.ZERO);
