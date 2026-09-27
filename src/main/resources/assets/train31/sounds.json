@@ -6,5 +6,11 @@
   "tunnel_rumble": {"sounds":[{"name":"train31:tunnel_rumble","stream":true}]},
   "metal_knocks": {"sounds":[{"name":"train31:metal_knocks","stream":false}]},
   "camera_click": {"sounds":[{"name":"train31:camera_click","stream":false}]},
-  "train_horn": {"sounds":[{"name":"train31:train_horn","stream":false}]}
+  "train_horn": {"sounds":[{"name":"train31:train_horn","stream":false}]},
+  "train_roll": {"sounds":[{"name":"train31:train_roll","stream":true}]},
+  "train_brakes": {"sounds":[{"name":"train31:train_brakes","stream":false}]},
+  "door_chime": {"sounds":[{"name":"train31:door_chime","stream":false}]},
+  "whisper_injaa": {"sounds":[{"name":"train31:whisper_injaa","stream":false}]},
+  "girl_roar": {"sounds":[{"name":"train31:girl_roar","stream":false}]},
+  "power_down": {"sounds":[{"name":"train31:power_down","stream":false}]}
 }
