@@ -31,7 +31,6 @@ public final class StationBuilder {
     private static final Map<UUID, List<UUID>> CAMERAS = new HashMap<>();
     private static final Map<UUID, UUID> TRAINS = new HashMap<>();
 
-    /** platformSide points from rail center toward the selected player platform. */
     public record RailGeometry(BlockPos rail, boolean axisZ, int platformSide, int tunnelSign) {}
 
     public static void prepare(ServerPlayer player) {
@@ -39,6 +38,7 @@ public final class StationBuilder {
             SceneSetup.status(player);
             return;
         }
+        if (!SceneSetup.valid(player)) return;
 
         ServerLevel level = player.serverLevel();
         cleanupCameras(level, player);
@@ -55,7 +55,6 @@ public final class StationBuilder {
 
         buildMonitorBank(level, SceneSetup.cctv(player), SceneSetup.cctvFacing(player));
         spawnCameras(level, player);
-        // Do NOT teleport here. Prepare must never move the player while testing/recording.
     }
 
     public static void ensurePrepared(ServerPlayer player) {
@@ -138,7 +137,6 @@ public final class StationBuilder {
                 new Train31Network.ClientState(Math.max(0, StoryDirector.currentTick(player)), StoryDirector.currentFog(player), -1, false, StoryDirector.isRunning(player)));
     }
 
-    /** Spawn the four CCTV feeds at the exact places the creator marked. */
     private static void spawnCameras(ServerLevel level, ServerPlayer player) {
         List<UUID> ids = new ArrayList<>();
         for (int i=1;i<=4;i++) {
@@ -151,13 +149,10 @@ public final class StationBuilder {
     private static UUID spawnCameraExact(ServerLevel level, BlockPos p, float yaw, float pitch) {
         ArmorStand a = EntityType.ARMOR_STAND.create(level);
         if (a == null) return UUID.randomUUID();
-        // Marker is where the player stood. Mount the lens roughly at eye/ceiling-camera height.
         double x=p.getX()+0.5, y=p.getY()+1.72, z=p.getZ()+0.5;
         a.setInvisible(true); a.setNoGravity(true); a.setInvulnerable(true); a.setSilent(true);
         a.setPos(x,y,z); a.setYRot(yaw); a.setXRot(pitch); a.setYHeadRot(yaw);
         a.addTag(CAMERA_TAG); level.addFreshEntity(a);
-
-        // Small visible CCTV housing at that exact marked spot, never auto-moved outside the subway.
         display(level,x,y-0.08,z,Blocks.BLACK_CONCRETE.defaultBlockState(),0.48f,0.34f,0.70f,yaw,CAMERA_PROP_TAG);
         display(level,x,y-0.08,z,Blocks.OBSERVER.defaultBlockState(),0.20f,0.20f,0.22f,yaw,CAMERA_PROP_TAG);
         return a.getUUID();
@@ -177,7 +172,6 @@ public final class StationBuilder {
         return origin.offset(r.getStepX()*right+forward.getStepX()*ahead,up,r.getStepZ()*right+forward.getStepZ()*ahead);
     }
 
-    /** Four-screen showcase wall plus console inside the exact marked CCTV room. */
     private static void buildMonitorBank(ServerLevel level, BlockPos c, Direction facing) {
         for(int x=-4;x<=4;x++) set(level,local(c,facing,x,0,1),Blocks.POLISHED_BLACKSTONE_SLAB.defaultBlockState());
         for(int x=-4;x<=4;x++) for(int y=1;y<=4;y++) set(level,local(c,facing,x,y,3),Blocks.BLACK_CONCRETE.defaultBlockState());
@@ -192,7 +186,6 @@ public final class StationBuilder {
         set(level,local(c,facing,4,4,3),Blocks.REDSTONE_LAMP.defaultBlockState());
     }
 
-    /** Spawn at the exact marked tunnel, never behind an entrance wall. */
     public static Train31Entity spawnTrain(ServerPlayer player) {
         removeTrain(player);
         ServerLevel level=player.serverLevel();
@@ -214,7 +207,6 @@ public final class StationBuilder {
         return e instanceof Train31Entity t?t:null;
     }
 
-    /** 0 = tunnel marker, 1 = exact stop rail marker. */
     public static void setTrainProgress(ServerPlayer player, double progress) {
         Train31Entity train=train(player); if(train==null)return;
         BlockPos tunnel=SceneSetup.tunnel(player), rail=SceneSetup.rail(player);
@@ -225,7 +217,6 @@ public final class StationBuilder {
         train.teleportTo(x,y,z);
     }
 
-    /** Move past the marked stop away from the tunnel; distance is blocks. */
     public static void departTrain(ServerPlayer player, double distance) {
         Train31Entity train=train(player); if(train==null)return;
         Vec3 tunnel=Vec3.atCenterOf(SceneSetup.tunnel(player));
