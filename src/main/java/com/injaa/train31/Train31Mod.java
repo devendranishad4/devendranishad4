@@ -54,6 +54,13 @@ public class Train31Mod {
     public static final RegistryObject<SoundEvent> TRAIN_BRAKES=sound("train_brakes");
     public static final RegistryObject<SoundEvent> DOOR_CHIME=sound("door_chime");
     public static final RegistryObject<SoundEvent> WHISPER_INJAA=sound("whisper_injaa");
+    public static final RegistryObject<SoundEvent> WHISPER_BEHIND=sound("whisper_behind");
+    public static final RegistryObject<SoundEvent> WHISPER_HERE=sound("whisper_here");
+    public static final RegistryObject<SoundEvent> WHISPER_DIE_HERE=sound("whisper_die_here");
+    public static final RegistryObject<SoundEvent> WHISPER_SEE_YOU=sound("whisper_see_you");
+    public static final RegistryObject<SoundEvent> WHISPER_FOUND_YOU=sound("whisper_found_you");
+    public static final RegistryObject<SoundEvent> WHISPER_CANT_LEAVE=sound("whisper_cant_leave");
+    public static final RegistryObject<SoundEvent> WHISPER_FINAL=sound("whisper_final");
     public static final RegistryObject<SoundEvent> GIRL_ROAR=sound("girl_roar");
     public static final RegistryObject<SoundEvent> POWER_DOWN=sound("power_down");
 
