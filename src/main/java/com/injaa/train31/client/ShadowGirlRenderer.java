@@ -15,7 +15,7 @@ public class ShadowGirlRenderer extends MobRenderer<ShadowGirlEntity, HumanoidMo
     private static final ResourceLocation FINAL_TEXTURE = new ResourceLocation(Train31Mod.MODID, "textures/entity/shadow_girl_final.png");
 
     public ShadowGirlRenderer(EntityRendererProvider.Context context) {
-        super(context, new HumanoidModel<>(context.bakeLayer(LAYER)), 0.38f);
+        super(context, new HumanoidModel<>(context.bakeLayer(LAYER)), 0.28f);
     }
 
     @Override
@@ -25,8 +25,9 @@ public class ShadowGirlRenderer extends MobRenderer<ShadowGirlEntity, HumanoidMo
 
     @Override
     protected void scale(ShadowGirlEntity entity, PoseStack pose, float partialTick) {
-        if(entity.isTall()) pose.scale(1.12F,2.05F,1.12F);
-        else if(entity.isFinalForm()) pose.scale(1.08F,1.10F,1.08F);
-        else pose.scale(0.98F,1.03F,0.98F);
+        // Normal/final forms are a smaller, slender girl. The first CCTV silhouette is intentionally unnaturally tall.
+        if(entity.isTall()) pose.scale(0.92F,2.05F,0.92F);
+        else if(entity.isFinalForm()) pose.scale(0.82F,1.00F,0.82F);
+        else pose.scale(0.76F,0.92F,0.76F);
     }
 }
