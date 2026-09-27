@@ -32,6 +32,8 @@ public class Train31Mod {
     public static final DeferredRegister<EntityType<?>> ENTITIES=DeferredRegister.create(ForgeRegistries.ENTITY_TYPES,MODID);
 
     public static final RegistryObject<Item> DIRECTOR=ITEMS.register("train31_director",()->new DirectorItem(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> CCTV_REMOTE=ITEMS.register("cctv_remote",()->new CctvRemoteItem(new Item.Properties().stacksTo(1)));
+
     public static final RegistryObject<EntityType<ShadowGirlEntity>> SHADOW_GIRL=ENTITIES.register("shadow_girl",()->
             EntityType.Builder.<ShadowGirlEntity>of(ShadowGirlEntity::new, MobCategory.MISC)
                     .sized(0.58f,1.82f).clientTrackingRange(12).updateInterval(2).build("shadow_girl"));
@@ -64,7 +66,10 @@ public class Train31Mod {
     @SubscribeEvent
     public void login(PlayerEvent.PlayerLoggedInEvent e){
         if(!(e.getEntity() instanceof ServerPlayer p))return;
-        if(p.getInventory().items.stream().noneMatch(s->s.is(DIRECTOR.get())))p.getInventory().add(new ItemStack(DIRECTOR.get()));
+        if(p.getInventory().items.stream().noneMatch(s->s.is(DIRECTOR.get())))
+            p.getInventory().add(new ItemStack(DIRECTOR.get()));
+        if(p.getInventory().items.stream().noneMatch(s->s.is(CCTV_REMOTE.get())))
+            p.getInventory().add(new ItemStack(CCTV_REMOTE.get()));
     }
 
     @SubscribeEvent
