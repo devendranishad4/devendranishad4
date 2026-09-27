@@ -83,6 +83,12 @@ public class Train31Mod {
     @SubscribeEvent
     public void commands(RegisterCommandsEvent e){
         e.getDispatcher().register(Commands.literal("train31")
+                .then(Commands.literal("set")
+                        .then(Commands.literal("start").executes(c->{SceneSetup.markStart(c.getSource().getPlayerOrException());return 1;}))
+                        .then(Commands.literal("cctv").executes(c->{SceneSetup.markCctv(c.getSource().getPlayerOrException());return 1;}))
+                        .then(Commands.literal("platform").executes(c->{SceneSetup.markPlatform(c.getSource().getPlayerOrException());return 1;})))
+                .then(Commands.literal("setup").executes(c->{SceneSetup.status(c.getSource().getPlayerOrException());return 1;}))
+                .then(Commands.literal("clearsetup").executes(c->{SceneSetup.clear(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("prepare").executes(c->{StationBuilder.prepare(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("start").then(Commands.argument("delay", IntegerArgumentType.integer(0,60)).executes(c->{StoryDirector.start(c.getSource().getPlayerOrException(),IntegerArgumentType.getInteger(c,"delay"));return 1;})))
                 .then(Commands.literal("reset").executes(c->{StoryDirector.reset(c.getSource().getPlayerOrException());return 1;}))
