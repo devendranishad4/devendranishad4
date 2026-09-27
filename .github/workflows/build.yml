@@ -25,41 +25,70 @@ jobs:
           sudo apt-get install -y ffmpeg espeak-ng
           python -m pip install --quiet pillow edge-tts
           python tools/generate_assets.py
-          mkdir -p src/main/resources/assets/train31/sounds
+          mkdir -p src/main/resources/assets/train31/sounds build/preview
 
-          make_voice() {
+          make_pa() {
             NAME="$1"
             TEXT="$2"
             RATE="$3"
-            PITCH="$4"
             set +e
-            edge-tts --voice ja-JP-NanamiNeural --rate="$RATE" --pitch="$PITCH" --text "$TEXT" --write-media "/tmp/${NAME}.mp3"
+            edge-tts --voice en-US-AriaNeural --rate="$RATE" --pitch="+0Hz" --text "$TEXT" --write-media "/tmp/${NAME}.mp3"
             CODE=$?
             set -e
             if [ $CODE -ne 0 ]; then
-              espeak-ng -v en+f3 -s 76 -p 38 -a 150 -w "/tmp/${NAME}.wav" "$TEXT"
+              espeak-ng -v en+f3 -s 130 -p 52 -a 145 -w "/tmp/${NAME}.wav" "$TEXT"
               ffmpeg -y -loglevel error -i "/tmp/${NAME}.wav" "/tmp/${NAME}.mp3"
             fi
           }
 
-          make_voice pa_normal "Attention please. The last service has ended. Platform three is closed." -10% -1Hz
-          make_voice pa_train31 "Attention please. Train thirty one is approaching platform three. Do not board this train." -16% -6Hz
+          make_girl() {
+            NAME="$1"
+            TEXT="$2"
+            RATE="$3"
+            set +e
+            edge-tts --voice en-US-JennyNeural --rate="$RATE" --pitch="-1Hz" --text "$TEXT" --write-media "/tmp/${NAME}_raw.mp3"
+            CODE=$?
+            set -e
+            if [ $CODE -ne 0 ]; then
+              espeak-ng -v en+f4 -s 102 -p 58 -a 135 -w "/tmp/${NAME}.wav" "$TEXT"
+              ffmpeg -y -loglevel error -i "/tmp/${NAME}.wav" "/tmp/${NAME}_raw.mp3"
+            fi
+            ffmpeg -y -loglevel error -i "/tmp/${NAME}_raw.mp3" -filter_complex \
+              "[0:a]asplit=2[a][b];[b]adelay=70|70,volume=0.18[b2];[a][b2]amix=inputs=2:normalize=0,highpass=f=145,lowpass=f=3500,acompressor=threshold=-24dB:ratio=2.0:attack=12:release=160,aecho=0.8:0.17:120:0.13,volume=1.28[out]" \
+              -map "[out]" -c:a libvorbis -q:a 6 "src/main/resources/assets/train31/sounds/${NAME}.ogg"
+          }
 
-          make_voice whisper_injaa "Injaa..." -48% -11Hz
-          make_voice whisper_behind "Don't turn around..." -46% -12Hz
-          make_voice whisper_here "You should not be here..." -44% -12Hz
-          make_voice whisper_die_here "You will die here..." -49% -14Hz
-          make_voice whisper_see_you "I can see you..." -47% -13Hz
-          make_voice whisper_found_you "I found you..." -45% -12Hz
-          make_voice whisper_cant_leave "You can't leave..." -50% -14Hz
-          make_voice whisper_final "Injaa... I will kill you..." -52% -16Hz
+          make_pa pa_normal "Attention please. The last service has ended. Platform three is closed." -8%
+          make_pa pa_train31 "Attention please. Train thirty one is approaching. Please stand behind the line." -12%
+          ffmpeg -y -loglevel error -i /tmp/pa_normal.mp3 -af "highpass=f=170,lowpass=f=6100,aecho=0.8:0.24:100:0.10" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_normal.ogg
+          ffmpeg -y -loglevel error -i /tmp/pa_train31.mp3 -af "highpass=f=170,lowpass=f=5200,aecho=0.8:0.28:115:0.14" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_train31.ogg
 
-          ffmpeg -y -loglevel error -i /tmp/pa_normal.mp3 -af "highpass=f=170,lowpass=f=6100,aecho=0.8:0.28:110:0.12" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_normal.ogg
-          ffmpeg -y -loglevel error -i /tmp/pa_train31.mp3 -af "highpass=f=170,lowpass=f=5000,aecho=0.8:0.34:120:0.20" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_train31.ogg
+          # ONE consistent girl voice. Neutral English accent; horror comes from close whisper processing, not pitch-down.
+          make_girl whisper_injaa "Injaa..." -27%
+          make_girl whisper_can_see "Can you see me?" -25%
+          make_girl whisper_behind "Don't turn around..." -28%
+          make_girl whisper_here "You shouldn't be here." -25%
+          make_girl whisper_why_here "Why did you come here?" -24%
+          make_girl whisper_coming "It's coming..." -30%
+          make_girl whisper_dont_board "Don't get on that train." -27%
+          make_girl whisper_see_you "I can see you..." -26%
+          make_girl whisper_cant_leave "You can't leave now." -27%
+          make_girl whisper_run "Injaa... run." -22%
+          make_girl whisper_found_you "I found you." -30%
+          make_girl whisper_should_listen "You should have listened..." -31%
 
-          for NAME in whisper_injaa whisper_behind whisper_here whisper_die_here whisper_see_you whisper_found_you whisper_cant_leave whisper_final; do
-            ffmpeg -y -loglevel error -i "/tmp/${NAME}.mp3" -af "highpass=f=115,lowpass=f=2400,aecho=0.8:0.30:185:0.40,volume=1.48" -c:a libvorbis -q:a 6 "src/main/resources/assets/train31/sounds/${NAME}.ogg"
-          done
+          # In-game style MP3 preview using the exact same voice/effects chain.
+          set +e
+          edge-tts --voice en-US-JennyNeural --rate="-27%" --pitch="-1Hz" --text "Injaa... Don't turn around... I can see you... You shouldn't be here." --write-media /tmp/voice_preview_raw.mp3
+          PREVIEW_CODE=$?
+          set -e
+          if [ $PREVIEW_CODE -ne 0 ]; then
+            espeak-ng -v en+f4 -s 102 -p 58 -a 135 -w /tmp/voice_preview.wav "Injaa... Don't turn around... I can see you... You shouldn't be here."
+            ffmpeg -y -loglevel error -i /tmp/voice_preview.wav /tmp/voice_preview_raw.mp3
+          fi
+          ffmpeg -y -loglevel error -i /tmp/voice_preview_raw.mp3 -filter_complex \
+            "[0:a]asplit=2[a][b];[b]adelay=70|70,volume=0.18[b2];[a][b2]amix=inputs=2:normalize=0,highpass=f=145,lowpass=f=3500,acompressor=threshold=-24dB:ratio=2.0:attack=12:release=160,aecho=0.8:0.17:120:0.13,volume=1.28[out]" \
+            -map "[out]" -c:a libmp3lame -q:a 2 build/preview/Train31_InGame_Voice_Preview.mp3
 
           python tools/generate_audio.py
       - name: Build
@@ -69,3 +98,8 @@ jobs:
         with:
           name: Train31-Tokyo-Horror-V3-Forge-1.20.1
           path: build/libs/*.jar
+      - name: Upload voice preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: Train31-InGame-Voice-Preview
+          path: build/preview/Train31_InGame_Voice_Preview.mp3
