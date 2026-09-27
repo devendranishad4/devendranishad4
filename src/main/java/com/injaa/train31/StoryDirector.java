@@ -48,12 +48,12 @@ public final class StoryDirector {
         int t=s.tick;
 
         if(t==0) say(player,"§7[11:45 PM] Night shift started. Platform 3 is out of service.");
-        if(t==1000){ sound(level,s.origin,SoundEvents.NOTE_BLOCK_BELL,0.6f); say(player,"§eA fluorescent light flickers somewhere below..."); }
-        if(t==2000){ sound(level,s.origin,SoundEvents.NOTE_BLOCK_BELL,0.4f); say(player,"§fAnnouncement: §7Last service has ended. Please leave the station."); }
+        if(t==1000){ sound(level,s.origin,SoundEvents.NOTE_BLOCK_BELL.value(),0.6f); say(player,"§eA fluorescent light flickers somewhere below..."); }
+        if(t==2000){ sound(level,s.origin,SoundEvents.NOTE_BLOCK_BELL.value(),0.4f); say(player,"§fAnnouncement: §7Last service has ended. Please leave the station."); }
         if(t==3200){ spawnShadow(level,s,"shadow",s.origin.offset(82,-21,85)); say(player,"§8Something is standing at the far end of Platform 3."); }
         if(t==4300){ sound(level,s.origin.offset(45,-22,90),SoundEvents.IRON_DOOR_CLOSE,0.55f); say(player,"§7...knock... knock... from below the platform."); }
         if(t==5400){ say(player,"§bCCTV CAM 03: §fMotion detected on Platform 3."); moveShadow(level,s.shadow,s.origin.offset(63,-21,84)); }
-        if(t==6500){ sound(level,s.origin.offset(-10,-18,58),SoundEvents.NOTE_BLOCK_BASS,0.5f); say(player,"§7Radio: Don't board it. Whatever happens, don't board Train 31."); }
+        if(t==6500){ sound(level,s.origin.offset(-10,-18,58),SoundEvents.NOTE_BLOCK_BASS.value(),0.5f); say(player,"§7Radio: Don't board it. Whatever happens, don't board Train 31."); }
         if(t==7700){ sound(level,s.origin.offset(120,-18,91),SoundEvents.ANVIL_LAND,0.35f); say(player,"§8A distant metallic horn rolls through the tunnel."); }
         if(t==8500){
             for(int i=0;i<8;i++) level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,s.origin.getX()+130+i*2,s.origin.getY()-18,s.origin.getZ()+91,12,1.2,0.7,1.2,0.01);
