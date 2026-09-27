@@ -40,7 +40,7 @@ public class Train31Mod {
 
     public static final RegistryObject<EntityType<Train31Entity>> TRAIN=ENTITIES.register("train31_train",()->
             EntityType.Builder.<Train31Entity>of(Train31Entity::new, MobCategory.MISC)
-                    .sized(3.6f,3.7f).clientTrackingRange(256).updateInterval(1).build("train31_train"));
+                    .sized(4.2f,4.2f).clientTrackingRange(256).updateInterval(1).build("train31_train"));
 
     public static final RegistryObject<SoundEvent> PA_NORMAL=sound("pa_normal");
     public static final RegistryObject<SoundEvent> PA_TRAIN31=sound("pa_train31");
@@ -53,14 +53,24 @@ public class Train31Mod {
     public static final RegistryObject<SoundEvent> TRAIN_ROLL=sound("train_roll");
     public static final RegistryObject<SoundEvent> TRAIN_BRAKES=sound("train_brakes");
     public static final RegistryObject<SoundEvent> DOOR_CHIME=sound("door_chime");
+
     public static final RegistryObject<SoundEvent> WHISPER_INJAA=sound("whisper_injaa");
+    public static final RegistryObject<SoundEvent> WHISPER_CAN_SEE=sound("whisper_can_see");
     public static final RegistryObject<SoundEvent> WHISPER_BEHIND=sound("whisper_behind");
     public static final RegistryObject<SoundEvent> WHISPER_HERE=sound("whisper_here");
-    public static final RegistryObject<SoundEvent> WHISPER_DIE_HERE=sound("whisper_die_here");
+    public static final RegistryObject<SoundEvent> WHISPER_WHY_HERE=sound("whisper_why_here");
+    public static final RegistryObject<SoundEvent> WHISPER_COMING=sound("whisper_coming");
+    public static final RegistryObject<SoundEvent> WHISPER_DONT_BOARD=sound("whisper_dont_board");
     public static final RegistryObject<SoundEvent> WHISPER_SEE_YOU=sound("whisper_see_you");
-    public static final RegistryObject<SoundEvent> WHISPER_FOUND_YOU=sound("whisper_found_you");
     public static final RegistryObject<SoundEvent> WHISPER_CANT_LEAVE=sound("whisper_cant_leave");
+    public static final RegistryObject<SoundEvent> WHISPER_RUN=sound("whisper_run");
+    public static final RegistryObject<SoundEvent> WHISPER_FOUND_YOU=sound("whisper_found_you");
+    public static final RegistryObject<SoundEvent> WHISPER_SHOULD_LISTEN=sound("whisper_should_listen");
+
+    // Kept so older resource packs/worlds do not break.
+    public static final RegistryObject<SoundEvent> WHISPER_DIE_HERE=sound("whisper_die_here");
     public static final RegistryObject<SoundEvent> WHISPER_FINAL=sound("whisper_final");
+
     public static final RegistryObject<SoundEvent> GIRL_ROAR=sound("girl_roar");
     public static final RegistryObject<SoundEvent> POWER_DOWN=sound("power_down");
 
@@ -83,10 +93,8 @@ public class Train31Mod {
     @SubscribeEvent
     public void login(PlayerEvent.PlayerLoggedInEvent e){
         if(!(e.getEntity() instanceof ServerPlayer p))return;
-        if(p.getInventory().items.stream().noneMatch(s->s.is(DIRECTOR.get())))
-            p.getInventory().add(new ItemStack(DIRECTOR.get()));
-        if(p.getInventory().items.stream().noneMatch(s->s.is(CCTV_REMOTE.get())))
-            p.getInventory().add(new ItemStack(CCTV_REMOTE.get()));
+        if(p.getInventory().items.stream().noneMatch(s->s.is(DIRECTOR.get()))) p.getInventory().add(new ItemStack(DIRECTOR.get()));
+        if(p.getInventory().items.stream().noneMatch(s->s.is(CCTV_REMOTE.get()))) p.getInventory().add(new ItemStack(CCTV_REMOTE.get()));
     }
 
     @SubscribeEvent
@@ -105,6 +113,13 @@ public class Train31Mod {
     @SubscribeEvent
     public void commands(RegisterCommandsEvent e){
         e.getDispatcher().register(Commands.literal("train31")
+                .then(Commands.literal("auto").executes(c->{
+                    ServerPlayer p=c.getSource().getPlayerOrException();
+                    PhysicalTrainBuilder.restore(p);
+                    SceneSetup.autoSetup(p);
+                    StationBuilder.prepare(p);
+                    return 1;
+                }))
                 .then(Commands.literal("set")
                         .then(Commands.literal("start").executes(c->{SceneSetup.markStart(c.getSource().getPlayerOrException());return 1;}))
                         .then(Commands.literal("cctv").executes(c->{SceneSetup.markCctv(c.getSource().getPlayerOrException());return 1;}))
@@ -117,7 +132,7 @@ public class Train31Mod {
                         .then(Commands.literal("cam3").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),3);return 1;}))
                         .then(Commands.literal("cam4").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),4);return 1;})))
                 .then(Commands.literal("setup").executes(c->{SceneSetup.status(c.getSource().getPlayerOrException());return 1;}))
-                .then(Commands.literal("clearsetup").executes(c->{SceneSetup.clear(c.getSource().getPlayerOrException());return 1;}))
+                .then(Commands.literal("clearsetup").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();PhysicalTrainBuilder.restore(p);SceneSetup.clear(p);return 1;}))
                 .then(Commands.literal("prepare").executes(c->{StationBuilder.prepare(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("start").then(Commands.argument("delay", IntegerArgumentType.integer(0,60)).executes(c->{StoryDirector.start(c.getSource().getPlayerOrException(),IntegerArgumentType.getInteger(c,"delay"));return 1;})))
                 .then(Commands.literal("reset").executes(c->{StoryDirector.reset(c.getSource().getPlayerOrException());return 1;}))
