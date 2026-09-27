@@ -5,7 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-/** Stores the exact creator-marked positions in the Tokyo station. */
+/** Stores exact creator-marked positions in the Tokyo station. */
 public final class SceneSetup {
     private SceneSetup() {}
 
@@ -24,39 +24,43 @@ public final class SceneSetup {
     public static void markStart(ServerPlayer p) {
         p.getPersistentData().putLong(START, p.blockPosition().asLong());
         p.getPersistentData().putFloat(START_YAW, p.getYRot());
-        p.sendSystemMessage(Component.literal("§aTrain 31 setup: START saved here."));
+        p.getPersistentData().remove("train31_prepared");
+        p.sendSystemMessage(Component.literal("§aTrain 31 setup: START saved outside at " + coord(p.blockPosition())));
     }
 
     public static void markCctv(ServerPlayer p) {
         p.getPersistentData().putLong(CCTV, p.blockPosition().asLong());
         p.getPersistentData().putString(CCTV_FACE, p.getDirection().getName());
-        p.sendSystemMessage(Component.literal("§aTrain 31 setup: CCTV ROOM saved. Stand inside the real room and face the wall where the monitor showcase should appear."));
+        p.getPersistentData().remove("train31_prepared");
+        p.sendSystemMessage(Component.literal("§aCCTV ROOM saved at " + coord(p.blockPosition()) + ". Face the monitor wall when saving."));
     }
 
     public static void markPlatform(ServerPlayer p) {
         p.getPersistentData().putLong(PLATFORM, p.blockPosition().asLong());
-        p.sendSystemMessage(Component.literal("§aTrain 31 setup: PLATFORM position saved."));
+        p.getPersistentData().remove("train31_prepared");
+        p.sendSystemMessage(Component.literal("§aPLATFORM saved at " + coord(p.blockPosition())));
     }
 
-    /** Stand on the exact track/rail where the train should stop. */
     public static void markRail(ServerPlayer p) {
         p.getPersistentData().putLong(RAIL, p.blockPosition().asLong());
-        p.sendSystemMessage(Component.literal("§aTrain 31 setup: TRAIN RAIL / STOP CENTER saved."));
+        p.getPersistentData().remove("train31_prepared");
+        p.sendSystemMessage(Component.literal("§aTRAIN STOP RAIL saved at " + coord(p.blockPosition())));
     }
 
-    /** Stand inside the real tunnel on the same rail, where the train must come from. */
     public static void markTunnel(ServerPlayer p) {
         p.getPersistentData().putLong(TUNNEL, p.blockPosition().asLong());
-        p.sendSystemMessage(Component.literal("§aTrain 31 setup: TUNNEL APPROACH saved."));
+        p.getPersistentData().remove("train31_prepared");
+        p.sendSystemMessage(Component.literal("§aTUNNEL APPROACH saved at " + coord(p.blockPosition())));
     }
 
-    /** Stand below the exact camera mounting spot and look exactly where that camera should look. */
+    /** Stand where the camera should be, look exactly where it should look, then save. */
     public static void markCamera(ServerPlayer p, int index) {
         if(index < 1 || index > 4) return;
         p.getPersistentData().putLong(camPosKey(index), p.blockPosition().asLong());
         p.getPersistentData().putFloat(camYawKey(index), p.getYRot());
         p.getPersistentData().putFloat(camPitchKey(index), p.getXRot());
-        p.sendSystemMessage(Component.literal("§aTrain 31 setup: CAM " + index + " saved. The camera will mount above this spot and use your current view direction."));
+        p.getPersistentData().remove("train31_prepared");
+        p.sendSystemMessage(Component.literal("§aCAM " + index + " saved at " + coord(p.blockPosition()) + " using your current view direction."));
     }
 
     public static boolean hasCamera(ServerPlayer p, int index) {
@@ -72,6 +76,38 @@ public final class SceneSetup {
                 && hasCamera(p,1) && hasCamera(p,2) && hasCamera(p,3) && hasCamera(p,4);
     }
 
+    /** Reject the exact mistake from the previous build: subway markers accidentally saved at the outside entrance. */
+    public static boolean valid(ServerPlayer p) {
+        if(!complete(p)) return false;
+        boolean ok=true;
+        BlockPos st=start(p), ct=cctv(p), pl=platform(p), ra=rail(p), tu=tunnel(p);
+
+        if(d2(st,pl) < 100){
+            p.sendSystemMessage(Component.literal("§cSetup error: PLATFORM is too close to START. PLATFORM must be inside/down in the subway.")); ok=false;
+        }
+        if(Math.abs(pl.getY()-ra.getY()) > 4 || d2(pl,ra) > 400){
+            p.sendSystemMessage(Component.literal("§cSetup error: RAIL must be beside the PLATFORM on the subway track.")); ok=false;
+        }
+        if(Math.abs(tu.getY()-ra.getY()) > 5 || d2(tu,ra) < 100){
+            p.sendSystemMessage(Component.literal("§cSetup error: TUNNEL must be farther down the SAME rail, not at the entrance/stop.")); ok=false;
+        }
+        if(d2(st,ra) < 100 || d2(st,tu) < 100){
+            p.sendSystemMessage(Component.literal("§cSetup error: RAIL/TUNNEL are still near the outside START. Train 31 would spawn outside.")); ok=false;
+        }
+        if(d2(ct,pl) > 14400){
+            p.sendSystemMessage(Component.literal("§cSetup error: CCTV ROOM looks too far from the subway platform.")); ok=false;
+        }
+        for(int i=1;i<=4;i++){
+            BlockPos c=cameraPos(p,i);
+            if(d2(c,pl) > 19600 || c.getY() > pl.getY()+24){
+                p.sendSystemMessage(Component.literal("§cSetup error: CAM " + i + " looks outside/far from the subway. Save it inside the station.")); ok=false;
+            }
+        }
+
+        if(!ok) p.getPersistentData().remove("train31_prepared");
+        return ok;
+    }
+
     public static BlockPos start(ServerPlayer p) { return BlockPos.of(p.getPersistentData().getLong(START)); }
     public static BlockPos cctv(ServerPlayer p) { return BlockPos.of(p.getPersistentData().getLong(CCTV)); }
     public static BlockPos platform(ServerPlayer p) { return BlockPos.of(p.getPersistentData().getLong(PLATFORM)); }
@@ -79,9 +115,7 @@ public final class SceneSetup {
     public static BlockPos tunnel(ServerPlayer p) { return BlockPos.of(p.getPersistentData().getLong(TUNNEL)); }
     public static float startYaw(ServerPlayer p) { return p.getPersistentData().getFloat(START_YAW); }
 
-    public static BlockPos cameraPos(ServerPlayer p, int index) {
-        return BlockPos.of(p.getPersistentData().getLong(camPosKey(index)));
-    }
+    public static BlockPos cameraPos(ServerPlayer p, int index) { return BlockPos.of(p.getPersistentData().getLong(camPosKey(index))); }
     public static float cameraYaw(ServerPlayer p, int index) { return p.getPersistentData().getFloat(camYawKey(index)); }
     public static float cameraPitch(ServerPlayer p, int index) { return p.getPersistentData().getFloat(camPitchKey(index)); }
 
@@ -97,12 +131,17 @@ public final class SceneSetup {
         String d = p.getPersistentData().contains(RAIL) ? "§aSET" : "§cMISSING";
         String e = p.getPersistentData().contains(TUNNEL) ? "§aSET" : "§cMISSING";
         p.sendSystemMessage(Component.literal("§eTrain 31 setup §7| §fSTART: " + a + " §7| §fCCTV: " + b + " §7| §fPLATFORM: " + c + " §7| §fRAIL: " + d + " §7| §fTUNNEL: " + e));
-        String cams = "§fCAM1: " + (hasCamera(p,1)?"§aSET":"§cMISSING")
-                + " §7| §fCAM2: " + (hasCamera(p,2)?"§aSET":"§cMISSING")
-                + " §7| §fCAM3: " + (hasCamera(p,3)?"§aSET":"§cMISSING")
-                + " §7| §fCAM4: " + (hasCamera(p,4)?"§aSET":"§cMISSING");
-        p.sendSystemMessage(Component.literal(cams));
+        p.sendSystemMessage(Component.literal("§fCAM1: " + (hasCamera(p,1)?"§aSET":"§cMISSING") + " §7| §fCAM2: " + (hasCamera(p,2)?"§aSET":"§cMISSING") + " §7| §fCAM3: " + (hasCamera(p,3)?"§aSET":"§cMISSING") + " §7| §fCAM4: " + (hasCamera(p,4)?"§aSET":"§cMISSING")));
+
+        if(p.getPersistentData().contains(START)) p.sendSystemMessage(Component.literal("§7START " + coord(start(p))));
+        if(p.getPersistentData().contains(CCTV)) p.sendSystemMessage(Component.literal("§7CCTV " + coord(cctv(p))));
+        if(p.getPersistentData().contains(PLATFORM)) p.sendSystemMessage(Component.literal("§7PLATFORM " + coord(platform(p))));
+        if(p.getPersistentData().contains(RAIL)) p.sendSystemMessage(Component.literal("§7RAIL " + coord(rail(p))));
+        if(p.getPersistentData().contains(TUNNEL)) p.sendSystemMessage(Component.literal("§7TUNNEL " + coord(tunnel(p))));
+        for(int i=1;i<=4;i++) if(hasCamera(p,i)) p.sendSystemMessage(Component.literal("§7CAM"+i+" "+coord(cameraPos(p,i))));
+
         if (!complete(p)) p.sendSystemMessage(Component.literal("§7One-time setup: set start | cctv | platform | rail | tunnel | cam1 | cam2 | cam3 | cam4"));
+        else valid(p);
     }
 
     public static void clear(ServerPlayer p) {
@@ -122,4 +161,10 @@ public final class SceneSetup {
         p.getPersistentData().remove("train31_remote_cam");
         p.sendSystemMessage(Component.literal("§eTrain 31 exact-map setup cleared."));
     }
+
+    private static long d2(BlockPos a, BlockPos b){
+        long dx=(long)a.getX()-b.getX(), dy=(long)a.getY()-b.getY(), dz=(long)a.getZ()-b.getZ();
+        return dx*dx+dy*dy+dz*dz;
+    }
+    private static String coord(BlockPos p){ return "["+p.getX()+", "+p.getY()+", "+p.getZ()+"]"; }
 }
