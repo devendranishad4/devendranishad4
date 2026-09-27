@@ -14,6 +14,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -28,8 +29,11 @@ public final class StationBuilder {
     private static final String CAMERA_TAG = "train31_camera";
     private static final String CAMERA_PROP_TAG = "train31_camera_prop";
     private static final String TRAIN_TAG = "train31_train_entity";
+    private static final String CCTV_ACTIVE = "train31_cctv_active";
+    private static final String CCTV_CURRENT = "train31_cctv_current";
     private static final Map<UUID, List<UUID>> CAMERAS = new HashMap<>();
     private static final Map<UUID, UUID> TRAINS = new HashMap<>();
+    private static final Map<UUID, List<BlockPos>> MAP_TRAIN_LIGHTS = new HashMap<>();
 
     public record RailGeometry(BlockPos rail, boolean axisZ, int platformSide, int tunnelSign) {}
 
@@ -43,6 +47,8 @@ public final class StationBuilder {
         ServerLevel level = player.serverLevel();
         cleanupCameras(level, player);
         removeTrain(player);
+        setMapTrainLights(player,false);
+        exitCamera(player);
 
         RailGeometry rail = geometryFromMarkers(player);
         player.getPersistentData().putLong("train31_rail", rail.rail().asLong());
@@ -106,10 +112,9 @@ public final class StationBuilder {
 
     public static void cycleCamera(ServerPlayer player) {
         ensurePrepared(player);
-        int index = player.getPersistentData().getInt("train31_cam_index");
-        index = (index + 1) % 4;
-        player.getPersistentData().putInt("train31_cam_index", index);
-        enterCamera(player, index);
+        int index = isCameraActive(player) ? currentCameraIndex(player)+1 : 0;
+        index = Math.floorMod(index,4);
+        enterCamera(player,index);
     }
 
     public static Entity cameraEntity(ServerPlayer player, int index) {
@@ -128,13 +133,32 @@ public final class StationBuilder {
         ensurePrepared(player);
         Entity e = cameraEntity(player,index);
         if (e == null) return;
+        int safeIndex=Math.floorMod(index,4);
+        player.getPersistentData().putBoolean(CCTV_ACTIVE,true);
+        player.getPersistentData().putInt(CCTV_CURRENT,safeIndex);
         Train31Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new Train31Network.ClientState(Math.max(0, StoryDirector.currentTick(player)), StoryDirector.currentFog(player), e.getId(), true, StoryDirector.isRunning(player)));
     }
 
     public static void exitCamera(ServerPlayer player) {
+        player.getPersistentData().putBoolean(CCTV_ACTIVE,false);
+        player.getPersistentData().putInt(CCTV_CURRENT,-1);
         Train31Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new Train31Network.ClientState(Math.max(0, StoryDirector.currentTick(player)), StoryDirector.currentFog(player), -1, false, StoryDirector.isRunning(player)));
+    }
+
+    public static boolean isCameraActive(ServerPlayer player){
+        return player.getPersistentData().getBoolean(CCTV_ACTIVE);
+    }
+
+    public static int currentCameraIndex(ServerPlayer player){
+        return player.getPersistentData().getInt(CCTV_CURRENT);
+    }
+
+    public static int currentCameraEntityId(ServerPlayer player){
+        if(!isCameraActive(player))return -1;
+        Entity e=cameraEntity(player,currentCameraIndex(player));
+        return e==null?-1:e.getId();
     }
 
     private static void spawnCameras(ServerLevel level, ServerPlayer player) {
@@ -186,6 +210,45 @@ public final class StationBuilder {
         set(level,local(c,facing,4,4,3),Blocks.REDSTONE_LAMP.defaultBlockState());
     }
 
+    /** Adds invisible vanilla light blocks only into air inside the creator-selected physical map train. */
+    public static void setMapTrainLights(ServerPlayer player, boolean on){
+        ServerLevel level=player.serverLevel();
+        if(!on){
+            List<BlockPos> old=MAP_TRAIN_LIGHTS.remove(player.getUUID());
+            if(old!=null) for(BlockPos p:old) if(level.getBlockState(p).is(Blocks.LIGHT)) level.setBlock(p,Blocks.AIR.defaultBlockState(),3);
+            return;
+        }
+        if(MAP_TRAIN_LIGHTS.containsKey(player.getUUID()))return;
+        if(!SceneSetup.complete(player))return;
+
+        BlockPos center=SceneSetup.mapTrain(player);
+        Direction forward=Direction.fromYRot(SceneSetup.mapTrainYaw(player));
+        if(!forward.getAxis().isHorizontal())forward=Direction.NORTH;
+        List<BlockPos> placed=new ArrayList<>();
+
+        for(int a=-24;a<=24;a+=3){
+            BlockPos base=center.relative(forward,a);
+            BlockPos p=base.above(2);
+            if(!level.getBlockState(p).isAir())p=base.above(1);
+            if(level.getBlockState(p).isAir()){
+                level.setBlock(p,Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL,12),3);
+                placed.add(p.immutable());
+            }
+        }
+        MAP_TRAIN_LIGHTS.put(player.getUUID(),placed);
+    }
+
+    public static BlockPos mapTrainSoundPos(ServerPlayer player){
+        return SceneSetup.mapTrain(player);
+    }
+
+    public static BlockPos mapTrainInteriorPos(ServerPlayer player,double forwardBlocks){
+        Direction forward=Direction.fromYRot(SceneSetup.mapTrainYaw(player));
+        if(!forward.getAxis().isHorizontal())forward=Direction.NORTH;
+        return SceneSetup.mapTrain(player).relative(forward,(int)Math.round(forwardBlocks));
+    }
+
+    /** Legacy custom train helpers remain only so old spawned entities can be cleaned up. */
     public static Train31Entity spawnTrain(ServerPlayer player) {
         removeTrain(player);
         ServerLevel level=player.serverLevel();
