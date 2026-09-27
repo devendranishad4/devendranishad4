@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="train31"
+version="1.0.0"
+displayName="Train 31 Director"
+authors="Injaa"
+description='''
+Train 31 Tokyo-style horror subway builder and recording director for Minecraft Forge 1.20.1.
+'''
+
+[[dependencies.train31]]
+modId="forge"
+mandatory=true
+versionRange="[47.4.20,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.train31]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
