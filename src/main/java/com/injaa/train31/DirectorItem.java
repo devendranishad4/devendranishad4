@@ -8,22 +8,16 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
+/** Recording-safe controller: right-click prepares/teleports outside; sneak-right-click starts after 20s. */
 public class DirectorItem extends Item {
-    public DirectorItem(Properties properties) {
-        super(properties);
-    }
+    public DirectorItem(Properties properties){super(properties);}
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        ItemStack stack = player.getItemInHand(hand);
-        if (level.isClientSide) return InteractionResultHolder.success(stack);
-        if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResultHolder.pass(stack);
-
-        if (player.isShiftKeyDown()) {
-            StoryDirector.start(serverPlayer, 20);
-        } else {
-            StationBuilder.build(serverPlayer);
-        }
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand){
+        ItemStack stack=player.getItemInHand(hand);
+        if(level.isClientSide)return InteractionResultHolder.success(stack);
+        if(!(player instanceof ServerPlayer p))return InteractionResultHolder.pass(stack);
+        if(player.isShiftKeyDown()) StoryDirector.start(p,20); else StationBuilder.prepare(p);
         return InteractionResultHolder.success(stack);
     }
 }
