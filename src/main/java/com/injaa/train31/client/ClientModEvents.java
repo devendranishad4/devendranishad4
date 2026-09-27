@@ -17,10 +17,12 @@ public final class ClientModEvents {
     public static void layers(EntityRenderersEvent.RegisterLayerDefinitions e) {
         e.registerLayerDefinition(ShadowGirlRenderer.LAYER,
                 () -> LayerDefinition.create(HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F), 64, 64));
+        e.registerLayerDefinition(Train31Renderer.LAYER, Train31Model::createBodyLayer);
     }
 
     @SubscribeEvent
     public static void renderers(EntityRenderersEvent.RegisterRenderers e) {
         e.registerEntityRenderer(Train31Mod.SHADOW_GIRL.get(), ShadowGirlRenderer::new);
+        e.registerEntityRenderer(Train31Mod.TRAIN.get(), Train31Renderer::new);
     }
 }
