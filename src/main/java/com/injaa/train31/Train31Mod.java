@@ -1,6 +1,7 @@
 package com.injaa.train31;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -55,10 +56,10 @@ public class Train31Mod {
                 return 1;
             }))
             .then(Commands.literal("start")
-                .then(Commands.argument("delay", net.minecraft.commands.arguments.IntegerArgumentType.integer(0, 60))
+                .then(Commands.argument("delay", IntegerArgumentType.integer(0, 60))
                     .executes(ctx -> {
                         ServerPlayer p = ctx.getSource().getPlayerOrException();
-                        int delay = net.minecraft.commands.arguments.IntegerArgumentType.getInteger(ctx, "delay");
+                        int delay = IntegerArgumentType.getInteger(ctx, "delay");
                         StoryDirector.start(p, delay);
                         return 1;
                     })))
