@@ -19,6 +19,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.8'
+      - name: Generate female PA voice asset
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y espeak-ng ffmpeg
+          mkdir -p src/main/resources/assets/train31/sounds
+          espeak-ng -v en+f3 -s 132 -p 62 -a 165 -w /tmp/train31_pa.wav "Attention please. The last service has ended. Please leave the station. Platform three remains closed."
+          ffmpeg -y -loglevel error -i /tmp/train31_pa.wav -c:a libvorbis -q:a 5 src/main/resources/assets/train31/sounds/pa_female.ogg
       - name: Build
         run: gradle build --stacktrace
       - name: Upload JAR
