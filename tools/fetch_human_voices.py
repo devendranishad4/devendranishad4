@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 import json
-import os
 import re
-import shutil
 import subprocess
-import sys
 import zipfile
 from pathlib import Path
 
@@ -16,45 +13,19 @@ OUT.mkdir(parents=True, exist_ok=True)
 PREVIEW = Path("build/preview")
 PREVIEW.mkdir(parents=True, exist_ok=True)
 
-# We deliberately use existing human performances only. We do not clone the artist's voice
-# or synthesize new words in her identity. Each event is matched to a real recorded phrase.
 TARGETS = {
-    "whisper_injaa": [
-        ("been waiting for you",), ("waiting for you",), ("hello",)
-    ],
-    "whisper_can_see": [
-        ("can you see me",), ("can see you",), ("see you",), ("i know you are here",)
-    ],
-    "whisper_behind": [
-        ("dont turn around",), ("don't turn around",), ("behind you",), ("beware",)
-    ],
-    "whisper_here": [
-        ("shouldnt be here",), ("shouldn't be here",), ("should not be here",), ("i know you are here",)
-    ],
-    "whisper_why_here": [
-        ("why did you come",), ("why are you here",), ("come to me",), ("follow me",)
-    ],
-    "whisper_coming": [
-        ("its coming",), ("it's coming",), ("coming",), ("follow me",)
-    ],
-    "whisper_dont_board": [
-        ("dont get on",), ("don't get on",), ("dont board",), ("don't board",), ("beware",)
-    ],
-    "whisper_see_you": [
-        ("i can see you",), ("can see you",), ("i know you are here",)
-    ],
-    "whisper_cant_leave": [
-        ("cant leave",), ("can't leave",), ("cannot leave",), ("waiting for you",)
-    ],
-    "whisper_run": [
-        ("run",), ("get out",), ("leave",)
-    ],
-    "whisper_found_you": [
-        ("i found you",), ("found you",), ("i know you are here",), ("waiting for you",)
-    ],
-    "whisper_should_listen": [
-        ("should have listened",), ("you should listen",), ("listen",), ("beware",)
-    ],
+    "whisper_injaa": [("been waiting for you",), ("waiting for you",), ("hello",)],
+    "whisper_can_see": [("can you see me",), ("can see you",), ("see you",), ("i know you are here",)],
+    "whisper_behind": [("dont turn around",), ("don't turn around",), ("behind you",), ("beware",)],
+    "whisper_here": [("shouldnt be here",), ("shouldn't be here",), ("should not be here",), ("i know you are here",)],
+    "whisper_why_here": [("why did you come",), ("why are you here",), ("come to me",), ("follow me",)],
+    "whisper_coming": [("its coming",), ("it's coming",), ("coming",), ("follow me",)],
+    "whisper_dont_board": [("dont get on",), ("don't get on",), ("dont board",), ("don't board",), ("beware",)],
+    "whisper_see_you": [("i can see you",), ("can see you",), ("i know you are here",)],
+    "whisper_cant_leave": [("cant leave",), ("can't leave",), ("cannot leave",), ("waiting for you",)],
+    "whisper_run": [("run",), ("get out",), ("leave",)],
+    "whisper_found_you": [("i found you",), ("found you",), ("i know you are here",), ("waiting for you",)],
+    "whisper_should_listen": [("should have listened",), ("you should listen",), ("listen",), ("beware",)],
 }
 
 AUDIO_EXTS = {".wav", ".mp3", ".ogg", ".flac", ".m4a", ".aac"}
@@ -77,19 +48,16 @@ def norm(s: str) -> str:
 
 def score_name(name: str, phrases) -> int:
     n = norm(name)
-    best = -10_000
+    best = -10000
     for (phrase,) in phrases:
         p = norm(phrase)
-        if not p:
-            continue
         if p in n:
             score = 100 + len(p)
         else:
             words = [w for w in p.split() if len(w) > 1]
-            hits = sum(1 for w in words if w in n)
-            if hits != len(words):
+            if not words or any(w not in n for w in words):
                 continue
-            score = 40 + hits * 6
+            score = 40 + len(words) * 6
         if "processed" in n or "fx" in n:
             score += 16
         if "dry" in n or "raw" in n:
@@ -107,6 +75,8 @@ def list_drive():
     entries = json.loads(result.stdout)
     (PREVIEW / "drive_listing.json").write_text(json.dumps(entries, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"Drive listing contains {len(entries)} files", flush=True)
+    for e in entries:
+        print("DRIVE_FILE:", e.get("path", ""), "=>", e.get("url", ""), flush=True)
     return entries
 
 
@@ -114,8 +84,7 @@ def choose_drive_entry(entries, phrases):
     candidates = []
     for e in entries:
         path = e.get("path", "")
-        ext = Path(path).suffix.lower()
-        if ext not in AUDIO_EXTS:
+        if Path(path).suffix.lower() not in AUDIO_EXTS:
             continue
         sc = score_name(path, phrases)
         if sc > 0:
@@ -129,24 +98,22 @@ def download_entry(url: str, dest: Path):
     return dest
 
 
-def category_archives(entries):
+def archive_candidates(entries):
     found = []
     for e in entries:
         path = e.get("path", "")
-        n = norm(path)
         if Path(path).suffix.lower() != ".zip":
             continue
-        if any(h in n for h in ("female ghost", "creepy girl", "ghostly", "evil women", "dark witch")):
-            score = 0
-            if "female ghost" in n:
-                score += 30
-            if "creepy girl" in n:
-                score += 24
-            if "ghostly" in n:
-                score += 18
-            if "free" in n:
-                score += 4
-            found.append((score, path, e["url"]))
+        n = norm(path)
+        score = 0
+        if "female ghost" in n: score += 50
+        if "creepy girl" in n: score += 45
+        if "ghostly" in n: score += 35
+        if "free" in n: score += 25
+        if "horror" in n: score += 15
+        if "bundle" in n: score += 10
+        if "update" in n: score -= 5
+        found.append((score, path, e["url"]))
     found.sort(reverse=True)
     return found
 
@@ -154,12 +121,12 @@ def category_archives(entries):
 def unpack_candidate_archives(entries):
     root = TMP / "archives"
     root.mkdir(parents=True, exist_ok=True)
-    chosen = category_archives(entries)[:4]
+    chosen = archive_candidates(entries)[:2]
     if not chosen:
         return []
-    print("Downloading a few voice-category archives as fallback:", flush=True)
+    print("Trying top archive fallbacks:", flush=True)
     for i, (_, path, url) in enumerate(chosen):
-        print("  ", path, flush=True)
+        print("ARCHIVE:", path, flush=True)
         zpath = TMP / f"category_{i}.zip"
         try:
             download_entry(url, zpath)
@@ -185,7 +152,6 @@ def make_silence(dest_ogg: Path):
 
 
 def process_voice(src: Path, dest_ogg: Path):
-    # Keep the real performance intact. Only trim dead air, remove low rumble and normalize gently.
     filt = (
         "silenceremove=start_periods=1:start_silence=0.03:start_threshold=-52dB:"
         "stop_periods=-1:stop_silence=0.40:stop_threshold=-55dB,"
@@ -197,10 +163,8 @@ def process_voice(src: Path, dest_ogg: Path):
 
 def main():
     entries = list_drive()
-    local_fallback = None
     selected = {}
 
-    # First pass: use individually exposed audio files from the public Drive bundle.
     for event, phrases in TARGETS.items():
         pick = choose_drive_entry(entries, phrases)
         if pick:
@@ -209,26 +173,15 @@ def main():
             try:
                 download_entry(url, src)
                 selected[event] = (src, path, sc)
-                continue
             except Exception as ex:
                 print(f"Direct file download failed for {event}: {ex}", flush=True)
 
-    # If the Drive exposes category ZIPs instead of individual files, download only a few relevant packs.
     missing = [e for e in TARGETS if e not in selected]
-    if missing:
-        local_fallback = unpack_candidate_archives(entries)
-        for event in missing:
-            p = choose_local(local_fallback, TARGETS[event]) if local_fallback else None
-            if p:
-                selected[event] = (p, str(p), score_name(str(p), TARGETS[event]))
-
-    # Find one real human clip as a last-resort source only for preview reference.
-    # Missing gameplay lines are SILENT instead of falling back to robotic TTS or repeating one sentence.
-    human_reference = None
-    for preferred in ("whisper_injaa", "whisper_here", "whisper_run"):
-        if preferred in selected:
-            human_reference = selected[preferred][0]
-            break
+    local_files = unpack_candidate_archives(entries) if missing else []
+    for event in missing:
+        p = choose_local(local_files, TARGETS[event]) if local_files else None
+        if p:
+            selected[event] = (p, str(p), score_name(str(p), TARGETS[event]))
 
     manifest = []
     preview_inputs = []
@@ -247,16 +200,12 @@ def main():
     manifest_path.write_text("\n".join(manifest) + "\n", encoding="utf-8")
     print(manifest_path.read_text(encoding="utf-8"), flush=True)
 
-    # Build an MP3 preview from the actual OGG files that Minecraft will use.
-    playable = [p for p in preview_inputs if p.exists()]
-    if playable:
+    if preview_inputs:
         concat_file = TMP / "preview_concat.txt"
-        concat_file.write_text("\n".join(f"file '{p.resolve()}'" for p in playable), encoding="utf-8")
+        concat_file.write_text("\n".join(f"file '{p.resolve()}'" for p in preview_inputs), encoding="utf-8")
         run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(concat_file), "-c:a", "libmp3lame", "-q:a", "2", str(PREVIEW / "Train31_Real_Human_Voice_Preview.mp3")])
-    elif human_reference:
-        run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(human_reference), "-c:a", "libmp3lame", "-q:a", "2", str(PREVIEW / "Train31_Real_Human_Voice_Preview.mp3")])
     else:
-        raise RuntimeError("Could not locate even one real female horror voice in the licensed public bundle.")
+        raise RuntimeError("Could not locate a real female horror voice in the public bundle; see DRIVE_FILE lines above.")
 
 
 if __name__ == "__main__":
