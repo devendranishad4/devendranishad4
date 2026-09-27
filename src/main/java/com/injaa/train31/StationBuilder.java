@@ -1,7 +1,6 @@
 package com.injaa.train31;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.ListTag;
@@ -14,7 +13,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -22,7 +20,7 @@ import net.minecraftforge.network.PacketDistributor;
 
 import java.util.*;
 
-/** Exact-map scene setup. Every important point is creator-marked; no map guessing. */
+/** Scene runtime: auto cameras, stable CCTV view and moving Train 31 entity. */
 public final class StationBuilder {
     private StationBuilder() {}
 
@@ -33,21 +31,16 @@ public final class StationBuilder {
     private static final String CCTV_CURRENT = "train31_cctv_current";
     private static final Map<UUID, List<UUID>> CAMERAS = new HashMap<>();
     private static final Map<UUID, UUID> TRAINS = new HashMap<>();
-    private static final Map<UUID, List<BlockPos>> MAP_TRAIN_LIGHTS = new HashMap<>();
 
     public record RailGeometry(BlockPos rail, boolean axisZ, int platformSide, int tunnelSign) {}
 
     public static void prepare(ServerPlayer player) {
-        if (!SceneSetup.complete(player)) {
-            SceneSetup.status(player);
-            return;
-        }
+        if (!SceneSetup.complete(player)) { SceneSetup.status(player); return; }
         if (!SceneSetup.valid(player)) return;
 
         ServerLevel level = player.serverLevel();
         cleanupCameras(level, player);
         removeTrain(player);
-        setMapTrainLights(player,false);
         exitCamera(player);
 
         RailGeometry rail = geometryFromMarkers(player);
@@ -59,7 +52,7 @@ public final class StationBuilder {
         player.getPersistentData().putLong("train31_cctv", SceneSetup.cctv(player).asLong());
         player.getPersistentData().putBoolean("train31_prepared", true);
 
-        buildMonitorBank(level, SceneSetup.cctv(player), SceneSetup.cctvFacing(player));
+        // No giant block monitor wall anymore. Only the small camera props are spawned.
         spawnCameras(level, player);
     }
 
@@ -107,14 +100,13 @@ public final class StationBuilder {
     public static boolean isMonitorClick(ServerPlayer player, BlockPos clicked) {
         if (!player.getPersistentData().getBoolean("train31_prepared")) return false;
         BlockPos c = cctvRoom(player);
-        return Math.abs(clicked.getX()-c.getX()) <= 7 && Math.abs(clicked.getY()-c.getY()) <= 5 && Math.abs(clicked.getZ()-c.getZ()) <= 7;
+        return Math.abs(clicked.getX()-c.getX()) <= 2 && Math.abs(clicked.getY()-c.getY()) <= 3 && Math.abs(clicked.getZ()-c.getZ()) <= 2;
     }
 
     public static void cycleCamera(ServerPlayer player) {
         ensurePrepared(player);
         int index = isCameraActive(player) ? currentCameraIndex(player)+1 : 0;
-        index = Math.floorMod(index,4);
-        enterCamera(player,index);
+        enterCamera(player, Math.floorMod(index,4));
     }
 
     public static Entity cameraEntity(ServerPlayer player, int index) {
@@ -147,14 +139,8 @@ public final class StationBuilder {
                 new Train31Network.ClientState(Math.max(0, StoryDirector.currentTick(player)), StoryDirector.currentFog(player), -1, false, StoryDirector.isRunning(player)));
     }
 
-    public static boolean isCameraActive(ServerPlayer player){
-        return player.getPersistentData().getBoolean(CCTV_ACTIVE);
-    }
-
-    public static int currentCameraIndex(ServerPlayer player){
-        return player.getPersistentData().getInt(CCTV_CURRENT);
-    }
-
+    public static boolean isCameraActive(ServerPlayer player){ return player.getPersistentData().getBoolean(CCTV_ACTIVE); }
+    public static int currentCameraIndex(ServerPlayer player){ return player.getPersistentData().getInt(CCTV_CURRENT); }
     public static int currentCameraEntityId(ServerPlayer player){
         if(!isCameraActive(player))return -1;
         Entity e=cameraEntity(player,currentCameraIndex(player));
@@ -177,8 +163,8 @@ public final class StationBuilder {
         a.setInvisible(true); a.setNoGravity(true); a.setInvulnerable(true); a.setSilent(true);
         a.setPos(x,y,z); a.setYRot(yaw); a.setXRot(pitch); a.setYHeadRot(yaw);
         a.addTag(CAMERA_TAG); level.addFreshEntity(a);
-        display(level,x,y-0.08,z,Blocks.BLACK_CONCRETE.defaultBlockState(),0.48f,0.34f,0.70f,yaw,CAMERA_PROP_TAG);
-        display(level,x,y-0.08,z,Blocks.OBSERVER.defaultBlockState(),0.20f,0.20f,0.22f,yaw,CAMERA_PROP_TAG);
+        display(level,x,y-0.08,z,Blocks.BLACK_CONCRETE.defaultBlockState(),0.34f,0.24f,0.48f,yaw,CAMERA_PROP_TAG);
+        display(level,x,y-0.08,z,Blocks.OBSERVER.defaultBlockState(),0.14f,0.14f,0.16f,yaw,CAMERA_PROP_TAG);
         return a.getUUID();
     }
 
@@ -191,64 +177,6 @@ public final class StationBuilder {
         for (Display.BlockDisplay d:level.getEntitiesOfClass(Display.BlockDisplay.class,box,e->e.getTags().contains(CAMERA_PROP_TAG))) d.discard();
     }
 
-    private static BlockPos local(BlockPos origin, Direction forward, int right, int up, int ahead) {
-        Direction r=forward.getClockWise();
-        return origin.offset(r.getStepX()*right+forward.getStepX()*ahead,up,r.getStepZ()*right+forward.getStepZ()*ahead);
-    }
-
-    private static void buildMonitorBank(ServerLevel level, BlockPos c, Direction facing) {
-        for(int x=-4;x<=4;x++) set(level,local(c,facing,x,0,1),Blocks.POLISHED_BLACKSTONE_SLAB.defaultBlockState());
-        for(int x=-4;x<=4;x++) for(int y=1;y<=4;y++) set(level,local(c,facing,x,y,3),Blocks.BLACK_CONCRETE.defaultBlockState());
-        for(int m=0;m<4;m++){
-            int x=-3+m*2;
-            set(level,local(c,facing,x,2,2),Blocks.TINTED_GLASS.defaultBlockState());
-            set(level,local(c,facing,x,3,2),Blocks.BLACK_STAINED_GLASS.defaultBlockState());
-            set(level,local(c,facing,x,1,2),Blocks.POLISHED_BLACKSTONE.defaultBlockState());
-            set(level,local(c,facing,x,4,2),Blocks.SMOOTH_STONE_SLAB.defaultBlockState());
-        }
-        set(level,local(c,facing,-4,4,3),Blocks.REDSTONE_LAMP.defaultBlockState());
-        set(level,local(c,facing,4,4,3),Blocks.REDSTONE_LAMP.defaultBlockState());
-    }
-
-    /** Adds invisible vanilla light blocks only into air inside the creator-selected physical map train. */
-    public static void setMapTrainLights(ServerPlayer player, boolean on){
-        ServerLevel level=player.serverLevel();
-        if(!on){
-            List<BlockPos> old=MAP_TRAIN_LIGHTS.remove(player.getUUID());
-            if(old!=null) for(BlockPos p:old) if(level.getBlockState(p).is(Blocks.LIGHT)) level.setBlock(p,Blocks.AIR.defaultBlockState(),3);
-            return;
-        }
-        if(MAP_TRAIN_LIGHTS.containsKey(player.getUUID()))return;
-        if(!SceneSetup.complete(player))return;
-
-        BlockPos center=SceneSetup.mapTrain(player);
-        Direction forward=Direction.fromYRot(SceneSetup.mapTrainYaw(player));
-        if(!forward.getAxis().isHorizontal())forward=Direction.NORTH;
-        List<BlockPos> placed=new ArrayList<>();
-
-        for(int a=-24;a<=24;a+=3){
-            BlockPos base=center.relative(forward,a);
-            BlockPos p=base.above(2);
-            if(!level.getBlockState(p).isAir())p=base.above(1);
-            if(level.getBlockState(p).isAir()){
-                level.setBlock(p,Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL,12),3);
-                placed.add(p.immutable());
-            }
-        }
-        MAP_TRAIN_LIGHTS.put(player.getUUID(),placed);
-    }
-
-    public static BlockPos mapTrainSoundPos(ServerPlayer player){
-        return SceneSetup.mapTrain(player);
-    }
-
-    public static BlockPos mapTrainInteriorPos(ServerPlayer player,double forwardBlocks){
-        Direction forward=Direction.fromYRot(SceneSetup.mapTrainYaw(player));
-        if(!forward.getAxis().isHorizontal())forward=Direction.NORTH;
-        return SceneSetup.mapTrain(player).relative(forward,(int)Math.round(forwardBlocks));
-    }
-
-    /** Legacy custom train helpers remain only so old spawned entities can be cleaned up. */
     public static Train31Entity spawnTrain(ServerPlayer player) {
         removeTrain(player);
         ServerLevel level=player.serverLevel();
@@ -314,5 +242,4 @@ public final class StationBuilder {
     }
 
     private static ListTag floats(float...v){ListTag l=new ListTag();for(float f:v)l.add(FloatTag.valueOf(f));return l;}
-    private static void set(ServerLevel l,BlockPos p,BlockState s){l.setBlock(p,s,3);}
 }
