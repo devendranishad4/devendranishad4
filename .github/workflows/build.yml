@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg espeak-ng
-          python -m pip install --quiet pillow edge-tts
+          python -m pip install --quiet pillow edge-tts yt-dlp
           python tools/generate_assets.py
           mkdir -p src/main/resources/assets/train31/sounds build/preview
 
@@ -41,54 +41,68 @@ jobs:
             fi
           }
 
-          make_girl() {
-            NAME="$1"
-            TEXT="$2"
-            RATE="$3"
-            set +e
-            edge-tts --voice en-US-JennyNeural --rate="$RATE" --pitch="-1Hz" --text "$TEXT" --write-media "/tmp/${NAME}_raw.mp3"
-            CODE=$?
-            set -e
-            if [ $CODE -ne 0 ]; then
-              espeak-ng -v en+f4 -s 102 -p 58 -a 135 -w "/tmp/${NAME}.wav" "$TEXT"
-              ffmpeg -y -loglevel error -i "/tmp/${NAME}.wav" "/tmp/${NAME}_raw.mp3"
-            fi
-            ffmpeg -y -loglevel error -i "/tmp/${NAME}_raw.mp3" -filter_complex \
-              "[0:a]asplit=2[a][b];[b]adelay=70|70,volume=0.18[b2];[a][b2]amix=inputs=2:normalize=0,highpass=f=145,lowpass=f=3500,acompressor=threshold=-24dB:ratio=2.0:attack=12:release=160,aecho=0.8:0.17:120:0.13,volume=1.28[out]" \
-              -map "[out]" -c:a libvorbis -q:a 6 "src/main/resources/assets/train31/sounds/${NAME}.ogg"
-          }
-
           make_pa pa_normal "Attention please. The last service has ended. Platform three is closed." -8%
           make_pa pa_train31 "Attention please. Train thirty one is approaching. Please stand behind the line." -12%
           ffmpeg -y -loglevel error -i /tmp/pa_normal.mp3 -af "highpass=f=170,lowpass=f=6100,aecho=0.8:0.24:100:0.10" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_normal.ogg
           ffmpeg -y -loglevel error -i /tmp/pa_train31.mp3 -af "highpass=f=170,lowpass=f=5200,aecho=0.8:0.28:115:0.14" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_train31.ogg
 
-          # ONE consistent girl voice. Neutral English accent; horror comes from close whisper processing, not pitch-down.
-          make_girl whisper_injaa "Injaa..." -27%
-          make_girl whisper_can_see "Can you see me?" -25%
-          make_girl whisper_behind "Don't turn around..." -28%
-          make_girl whisper_here "You shouldn't be here." -25%
-          make_girl whisper_why_here "Why did you come here?" -24%
-          make_girl whisper_coming "It's coming..." -30%
-          make_girl whisper_dont_board "Don't get on that train." -27%
-          make_girl whisper_see_you "I can see you..." -26%
-          make_girl whisper_cant_leave "You can't leave now." -27%
-          make_girl whisper_run "Injaa... run." -22%
-          make_girl whisper_found_you "I found you." -30%
-          make_girl whisper_should_listen "You should have listened..." -31%
+          # Real human female horror voice clips from one creator (AlesiaDavina),
+          # each listed by Pixabay as free for use under the Pixabay Content License.
+          # No voice cloning and no pitch-down: keep the actual human performance natural.
+          fetch_voice() {
+            KEY="$1"
+            URL="$2"
+            yt-dlp --no-playlist --quiet -x --audio-format mp3 -o "/tmp/${KEY}.%(ext)s" "$URL"
+          }
 
-          # In-game style MP3 preview using the exact same voice/effects chain.
-          set +e
-          edge-tts --voice en-US-JennyNeural --rate="-27%" --pitch="-1Hz" --text "Injaa... Don't turn around... I can see you... You shouldn't be here." --write-media /tmp/voice_preview_raw.mp3
-          PREVIEW_CODE=$?
-          set -e
-          if [ $PREVIEW_CODE -ne 0 ]; then
-            espeak-ng -v en+f4 -s 102 -p 58 -a 135 -w /tmp/voice_preview.wav "Injaa... Don't turn around... I can see you... You shouldn't be here."
-            ffmpeg -y -loglevel error -i /tmp/voice_preview.wav /tmp/voice_preview_raw.mp3
-          fi
-          ffmpeg -y -loglevel error -i /tmp/voice_preview_raw.mp3 -filter_complex \
-            "[0:a]asplit=2[a][b];[b]adelay=70|70,volume=0.18[b2];[a][b2]amix=inputs=2:normalize=0,highpass=f=145,lowpass=f=3500,acompressor=threshold=-24dB:ratio=2.0:attack=12:release=160,aecho=0.8:0.17:120:0.13,volume=1.28[out]" \
-            -map "[out]" -c:a libmp3lame -q:a 2 build/preview/Train31_InGame_Voice_Preview.mp3
+          fetch_voice waiting "https://pixabay.com/sound-effects/horror-female-ghost-voice-ix27ve-been-waiting-for-you-471635/"
+          fetch_voice know_here "https://pixabay.com/sound-effects/horror-female-ghost-voice-i-know-you-are-here-468557/"
+          fetch_voice follow_me "https://pixabay.com/sound-effects/horror-female-ghost-voice-follow-me-471642/"
+          fetch_voice come_to_me "https://pixabay.com/sound-effects/people-female-ghostly-horror-voice-come-to-me-468554/"
+          fetch_voice beware "https://pixabay.com/sound-effects/horror-female-ghost-voice-beware-471629/"
+          fetch_voice run "https://pixabay.com/sound-effects/horror-creepy-halloween-horror-voice-run-vol-006-165226/"
+          fetch_voice hello "https://pixabay.com/sound-effects/horror-halloween-horror-voice-hello-vol-006-165220/"
+
+          human_voice() {
+            OUT="$1"
+            SRC="$2"
+            ffmpeg -y -loglevel error -i "/tmp/${SRC}.mp3" -af \
+              "highpass=f=115,lowpass=f=5600,acompressor=threshold=-22dB:ratio=1.8:attack=12:release=190,aecho=0.78:0.17:145:0.10,volume=1.08" \
+              -c:a libvorbis -q:a 6 "src/main/resources/assets/train31/sounds/${OUT}.ogg"
+          }
+
+          # Same real woman throughout the episode. The story events keep their existing IDs,
+          # but the spoken content is now real human horror dialogue rather than generated TTS.
+          human_voice whisper_injaa waiting
+          human_voice whisper_can_see know_here
+          human_voice whisper_behind beware
+          human_voice whisper_here know_here
+          human_voice whisper_why_here come_to_me
+          human_voice whisper_coming follow_me
+          human_voice whisper_dont_board beware
+          human_voice whisper_see_you know_here
+          human_voice whisper_cant_leave waiting
+          human_voice whisper_run run
+          human_voice whisper_found_you waiting
+          human_voice whisper_should_listen beware
+
+          # Preview exactly what the human voice pack will sound like in Minecraft.
+          ffmpeg -y -loglevel error \
+            -i /tmp/waiting.mp3 -i /tmp/know_here.mp3 -i /tmp/follow_me.mp3 -i /tmp/come_to_me.mp3 -i /tmp/beware.mp3 -i /tmp/run.mp3 \
+            -filter_complex \
+            "[0:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a0];\
+             [1:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a1];\
+             [2:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a2];\
+             [3:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a3];\
+             [4:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a4];\
+             [5:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a5];\
+             anullsrc=r=44100:cl=stereo:d=0.65[s0];\
+             anullsrc=r=44100:cl=stereo:d=0.65[s1];\
+             anullsrc=r=44100:cl=stereo:d=0.65[s2];\
+             anullsrc=r=44100:cl=stereo:d=0.65[s3];\
+             anullsrc=r=44100:cl=stereo:d=0.65[s4];\
+             [a0][s0][a1][s1][a2][s2][a3][s3][a4][s4][a5]concat=n=11:v=0:a=1[out]" \
+            -map "[out]" -c:a libmp3lame -q:a 2 build/preview/Train31_Real_Human_Voice_Preview.mp3
 
           python tools/generate_audio.py
       - name: Build
@@ -101,5 +115,5 @@ jobs:
       - name: Upload voice preview
         uses: actions/upload-artifact@v4
         with:
-          name: Train31-InGame-Voice-Preview
-          path: build/preview/Train31_InGame_Voice_Preview.mp3
+          name: Train31-Real-Human-Voice-Preview
+          path: build/preview/Train31_Real_Human_Voice_Preview.mp3
