@@ -15,8 +15,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Cinematic, location-aware Train 31 story. No chat/action-bar narration: the scene is told by sound,
- * lighting, live CCTV, fog, the actor and the moving train. The only normal HUD element is the clock.
+ * Cinematic Train 31 story. During recording there is no chat/action-bar narration:
+ * story is told by audio, lighting, live CCTV, fog, the girl and the moving train.
  */
 public final class StoryDirector {
     private StoryDirector() {}
@@ -35,7 +35,12 @@ public final class StoryDirector {
 
     public static void start(ServerPlayer player, int delaySeconds) {
         if (STATES.containsKey(player.getUUID())) return;
+        if (!SceneSetup.complete(player)) {
+            SceneSetup.status(player);
+            return;
+        }
         StationBuilder.ensurePrepared(player);
+        if (!player.getPersistentData().getBoolean("train31_prepared")) return;
         StationBuilder.exitCamera(player);
         StationBuilder.removeTrain(player.serverLevel(), StationBuilder.geometry(player).rail());
         State s = new State(Math.max(0,delaySeconds)*20);
@@ -56,7 +61,7 @@ public final class StoryDirector {
 
         if(t<0){ if(t%20==0)sync(player,s,-1,false); return; }
 
-        // 0:00-1:20 — ordinary late-night station. No horror yet.
+        // 0:00-1:20 ordinary station. Horror starts subtly, not immediately.
         if(t==200) LightingController.pulse(player,true);
         if(t==204) LightingController.pulse(player,false);
         if(t==360) LightingController.pulse(player,true);
@@ -64,21 +69,17 @@ public final class StoryDirector {
         if(t==420) play(level,g.rail(),Train31Mod.FLUORESCENT_BUZZ.get(),1.1f,1.0f);
         if(t==1200) play(level,g.rail(),Train31Mod.PA_NORMAL.get(),4.0f,1.0f);
 
-        // 1:20-3:00 — small physical signs that something is wrong.
+        // 1:20-3:00 physical/sound anomalies.
         if(t==1750 || t==2050) {
-            BlockPos p=g.axisZ()?g.rail().offset(4,0,18):g.rail().offset(18,0,4);
+            BlockPos p=g.axisZ()?g.rail().offset(g.platformSide()*4,0,18):g.rail().offset(18,0,g.platformSide()*4);
             play(level,p,Train31Mod.METAL_KNOCKS.get(),1.7f,0.95f);
         }
-        if(t==2200) {
-            BlockPos room=StationBuilder.cctvRoom(player);
-            play(level,room,Train31Mod.CAMERA_CLICK.get(),1.6f,1.0f);
-        }
+        if(t==2200) play(level,StationBuilder.cctvRoom(player),Train31Mod.CAMERA_CLICK.get(),1.6f,1.0f);
 
-        // 3:00-4:10 — first sighting exists ONLY on the real CCTV view.
+        // 3:00-4:10 first girl sighting is on CCTV.
         if(t==3600) {
-            spawnGirl(level,s, cameraScenePos(g,0));
-            BlockPos room=StationBuilder.cctvRoom(player);
-            play(level,room,Train31Mod.CCTV_STATIC.get(),1.0f,1.0f);
+            spawnGirl(level,s,cameraScenePos(g,0));
+            play(level,StationBuilder.cctvRoom(player),Train31Mod.CCTV_STATIC.get(),1.0f,1.0f);
         }
         if(t>=3600 && t<3900 && !s.cctvAuto && player.blockPosition().closerThan(StationBuilder.cctvRoom(player),12.0)) {
             StationBuilder.enterCamera(player,2);
@@ -92,7 +93,7 @@ public final class StoryDirector {
             StationBuilder.exitCamera(player); s.cctvAuto=false;
         }
 
-        // 4:10-6:30 — proper world fog, not a cloud-particle wall. It slowly steals view distance.
+        // 4:10-6:30 fog closes visibility gradually.
         if(t>=5000 && t<7800) {
             s.fog = Math.min(0.92f,(t-5000)/2800f*0.92f);
             if(t%40==0) lowMist(level,g.rail(),g.axisZ(),s.fog);
@@ -103,24 +104,24 @@ public final class StoryDirector {
             remove(level,s.girl);
             spawnGirl(level,s,fogGirlPos(g,24));
         }
-        if(t>=5850 && t<7400 && t%80==0 && s.girl!=null) advanceGirlWhenUnseen(player,level,s,g);
+        if(t>=5850 && t<7400 && t%80==0 && s.girl!=null) advanceGirlWhenUnseen(player,level,s);
         if(t==6500) play(level,g.rail(),Train31Mod.PA_TRAIN31.get(),4.5f,0.98f);
         if(t==7000) play(level,tunnelPos(g,42),Train31Mod.TRAIN_HORN.get(),3.2f,0.88f);
 
-        // 6:30-8:00 — fog peaks, figure vanishes, then the tunnel becomes unnaturally quiet.
+        // 6:30-8:00 peak fog and quiet reset before the train.
         if(t>=7800 && t<9300) s.fog=0.94f;
         if(t==7900){remove(level,s.girl);s.girl=null;}
         if(t==8200) LightingController.pulse(player,true);
         if(t==8240) LightingController.pulse(player,false);
         if(t==8600) play(level,tunnelPos(g,48),Train31Mod.TUNNEL_RUMBLE.get(),2.2f,0.68f);
 
-        // 8:00-10:00 — Train 31 actually approaches and stops next to the detected platform/rail.
+        // 8:00-10:00 Train 31 approaches the exact marked platform rail and puts its first door at the mark.
         if(t==9600){
             s.trainOffset=62.0; StationBuilder.spawnTrain(level,g,s.trainOffset); s.trainSpawned=true;
             play(level,tunnelPos(g,50),Train31Mod.TRAIN_HORN.get(),3.5f,0.76f);
         }
         if(t>=9600 && t<11100 && s.trainSpawned){
-            double target=4.2;
+            double target=0.0;
             double progress=(t-9600)/1500.0;
             double eased=1.0-Math.pow(1.0-Math.min(1,progress),3);
             double next=62.0+(target-62.0)*eased;
@@ -129,7 +130,7 @@ public final class StoryDirector {
         }
         if(t==11200){ StationBuilder.openTrainDoors(level,g); s.fog=0.48f; }
 
-        // 10:00-12:15 — no immediate attack. The girl appears where the train windows/cameras frame her.
+        // 10:00-12:15 girl appears on the SAME marked platform side.
         if(t==12100) spawnGirl(level,s,platformGirlPos(g,16));
         if(t==12600) moveGirl(level,s.girl,platformGirlPos(g,10));
         if(t==13000 && player.blockPosition().closerThan(StationBuilder.cctvRoom(player),13.0)) {
@@ -139,7 +140,7 @@ public final class StoryDirector {
         if(s.cctvAuto && t==s.cctvUntil){ StationBuilder.exitCamera(player); s.cctvAuto=false; }
         if(t==13700){ remove(level,s.girl); s.girl=null; play(level,g.rail(),Train31Mod.CCTV_STATIC.get(),1.4f,0.7f); }
 
-        // 12:15-14:10 — only now does the direct chase begin.
+        // 12:15-14:10 direct chase only near the end.
         if(t==14700){ s.fog=0.78f; spawnGirl(level,s,platformGirlPos(g,22)); }
         if(t>=14900 && t<16600 && s.girl!=null){
             Entity e=level.getEntity(s.girl);
@@ -147,7 +148,7 @@ public final class StoryDirector {
             if(t%140==0) play(level,e!=null?e.blockPosition():g.rail(),Train31Mod.METAL_KNOCKS.get(),0.9f,0.65f);
         }
 
-        // 14:10-15:00 — silence, return, departure. No exposition text.
+        // 14:10-15:00 silence and departure.
         if(t==16900){ remove(level,s.girl); s.girl=null; s.fog=0f; LightingController.pulse(player,false); }
         if(t>=17400 && t<18000 && s.trainSpawned){
             double next=s.trainOffset+0.11;
@@ -161,10 +162,10 @@ public final class StoryDirector {
 
     public static void reset(ServerPlayer player){
         State s=STATES.remove(player.getUUID());
-        if(s!=null){ remove(player.serverLevel(),s.girl); }
+        if(s!=null) remove(player.serverLevel(),s.girl);
         LightingController.restore(player);
         StationBuilder.exitCamera(player);
-        StationBuilder.removeTrain(player.serverLevel(),StationBuilder.geometry(player).rail());
+        if(SceneSetup.complete(player)) StationBuilder.removeTrain(player.serverLevel(),StationBuilder.geometry(player).rail());
         Train31Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),new Train31Network.ClientState(0,0f,-1,false,false));
     }
 
@@ -194,15 +195,22 @@ public final class StoryDirector {
         girl.setPos(p.getX()+0.5,p.getY(),p.getZ()+0.5);girl.setYRot(180f);girl.setYHeadRot(180f);girl.setInvulnerable(true);
         girl.addTag("train31_girl");l.addFreshEntity(girl);s.girl=girl.getUUID();
     }
+
     private static void moveGirl(ServerLevel l,UUID id,BlockPos p){Entity e=id==null?null:l.getEntity(id);if(e!=null)e.teleportTo(p.getX()+0.5,p.getY(),p.getZ()+0.5);}
     private static void remove(ServerLevel l,UUID id){Entity e=id==null?null:l.getEntity(id);if(e!=null)e.discard();}
 
     private static BlockPos cameraScenePos(StationBuilder.RailGeometry g,int stage){int d=stage==0?30:stage==1?18:7;return platformGirlPos(g,d);}
-    private static BlockPos platformGirlPos(StationBuilder.RailGeometry g,int along){return g.axisZ()?g.rail().offset(-5,1,along):g.rail().offset(along,1,-5);}
-    private static BlockPos fogGirlPos(StationBuilder.RailGeometry g,int along){return g.axisZ()?g.rail().offset(-4,1,along):g.rail().offset(along,1,-4);}
+    private static BlockPos platformGirlPos(StationBuilder.RailGeometry g,int along){
+        int s=g.platformSide();
+        return g.axisZ()?g.rail().offset(s*5,1,along):g.rail().offset(along,1,s*5);
+    }
+    private static BlockPos fogGirlPos(StationBuilder.RailGeometry g,int along){
+        int s=g.platformSide();
+        return g.axisZ()?g.rail().offset(s*4,1,along):g.rail().offset(along,1,s*4);
+    }
     private static BlockPos tunnelPos(StationBuilder.RailGeometry g,int along){return g.axisZ()?g.rail().offset(0,0,along):g.rail().offset(along,0,0);}
 
-    private static void advanceGirlWhenUnseen(ServerPlayer p,ServerLevel level,State s,StationBuilder.RailGeometry g){
+    private static void advanceGirlWhenUnseen(ServerPlayer p,ServerLevel level,State s){
         Entity e=level.getEntity(s.girl);if(e==null)return;
         Vec3 to=e.position().subtract(p.position());double len=to.length();if(len<3)return;
         double dot=p.getLookAngle().normalize().dot(to.normalize());
