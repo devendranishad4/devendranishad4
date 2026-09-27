@@ -12,7 +12,7 @@ import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.level.Heightmap;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -64,8 +64,10 @@ public final class StationBuilder {
 
     public static RailGeometry geometry(ServerPlayer player) {
         long packed = player.getPersistentData().getLong("train31_rail");
-        BlockPos rail = packed == 0 ? findRail(player.serverLevel(), TOKYO_ANCHOR).rail() : BlockPos.of(packed);
-        return new RailGeometry(rail, player.getPersistentData().getBoolean("train31_axis_z"));
+        RailGeometry detected = packed == 0 ? findRail(player.serverLevel(), TOKYO_ANCHOR) : null;
+        BlockPos rail = packed == 0 ? detected.rail() : BlockPos.of(packed);
+        boolean axisZ = packed == 0 ? detected.axisZ() : player.getPersistentData().getBoolean("train31_axis_z");
+        return new RailGeometry(rail, axisZ);
     }
 
     public static BlockPos cctvRoom(ServerPlayer player) {
@@ -74,6 +76,7 @@ public final class StationBuilder {
     }
 
     public static boolean isMonitorClick(ServerPlayer player, BlockPos clicked) {
+        if (!player.getPersistentData().getBoolean("train31_prepared")) return false;
         BlockPos c = cctvRoom(player);
         return Math.abs(clicked.getX()-c.getX()) <= 5 && Math.abs(clicked.getY()-c.getY()) <= 4 && Math.abs(clicked.getZ()-c.getZ()) <= 5;
     }
@@ -124,7 +127,6 @@ public final class StationBuilder {
         ArmorStand a = EntityType.ARMOR_STAND.create(level);
         if (a == null) return UUID.randomUUID();
         a.setInvisible(true);
-        a.setMarker(true);
         a.setNoGravity(true);
         a.setInvulnerable(true);
         a.setSilent(true);
@@ -232,15 +234,13 @@ public final class StationBuilder {
             double x=g.rail().getX()+0.5+(g.axisZ()?0:along);
             double z=g.rail().getZ()+0.5+(g.axisZ()?along:0);
             double y=g.rail().getY()+1.65;
-            // body shell + roof + dark windows + red route stripe + doors + interior light
             display(level,x,y,z,Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState(),3.65f,2.85f,8.0f,yaw,TRAIN_TAG);
             display(level,x,y+1.48,z,Blocks.SMOOTH_STONE.defaultBlockState(),3.82f,0.18f,8.12f,yaw,TRAIN_TAG);
             display(level,x,y+0.45,z,Blocks.BLACK_STAINED_GLASS.defaultBlockState(),3.76f,1.12f,6.2f,yaw,TRAIN_TAG);
             display(level,x,y-0.55,z,Blocks.RED_CONCRETE.defaultBlockState(),3.78f,0.22f,7.9f,yaw,TRAIN_TAG);
             display(level,x,y+1.05,z,Blocks.SEA_LANTERN.defaultBlockState(),2.7f,0.06f,6.4f,yaw,TRAIN_TAG);
-            display(level,x,y,z-0.0,Blocks.IRON_BLOCK.defaultBlockState(),3.86f,2.42f,1.35f,yaw,TRAIN_TAG,DOOR_TAG);
+            display(level,x,y,z,Blocks.IRON_BLOCK.defaultBlockState(),3.86f,2.42f,1.35f,yaw,TRAIN_TAG,DOOR_TAG);
         }
-        // front plate and headlamps near first coach
         double fx=g.rail().getX()+0.5+(g.axisZ()?0:offset-4.15);
         double fz=g.rail().getZ()+0.5+(g.axisZ()?offset-4.15:0);
         double fy=g.rail().getY()+1.65;
