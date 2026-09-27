@@ -164,7 +164,6 @@ public final class StoryDirector {
         e.setSilent(true);
         e.setNoBasePlate(true);
         e.setShowArms(true);
-        e.setGravity(false);
         e.setYRot(180.0f);
         e.setPos(p.getX()+0.5,p.getY(),p.getZ()+0.5);
 
