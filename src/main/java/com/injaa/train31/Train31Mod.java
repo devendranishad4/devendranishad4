@@ -36,7 +36,11 @@ public class Train31Mod {
 
     public static final RegistryObject<EntityType<ShadowGirlEntity>> SHADOW_GIRL=ENTITIES.register("shadow_girl",()->
             EntityType.Builder.<ShadowGirlEntity>of(ShadowGirlEntity::new, MobCategory.MISC)
-                    .sized(0.58f,1.82f).clientTrackingRange(12).updateInterval(2).build("shadow_girl"));
+                    .sized(0.58f,1.82f).clientTrackingRange(64).updateInterval(1).build("shadow_girl"));
+
+    public static final RegistryObject<EntityType<Train31Entity>> TRAIN=ENTITIES.register("train31_train",()->
+            EntityType.Builder.<Train31Entity>of(Train31Entity::new, MobCategory.MISC)
+                    .sized(3.6f,3.7f).clientTrackingRange(192).updateInterval(1).build("train31_train"));
 
     public static final RegistryObject<SoundEvent> PA_NORMAL=sound("pa_normal");
     public static final RegistryObject<SoundEvent> PA_TRAIN31=sound("pa_train31");
@@ -46,6 +50,12 @@ public class Train31Mod {
     public static final RegistryObject<SoundEvent> METAL_KNOCKS=sound("metal_knocks");
     public static final RegistryObject<SoundEvent> CAMERA_CLICK=sound("camera_click");
     public static final RegistryObject<SoundEvent> TRAIN_HORN=sound("train_horn");
+    public static final RegistryObject<SoundEvent> TRAIN_ROLL=sound("train_roll");
+    public static final RegistryObject<SoundEvent> TRAIN_BRAKES=sound("train_brakes");
+    public static final RegistryObject<SoundEvent> DOOR_CHIME=sound("door_chime");
+    public static final RegistryObject<SoundEvent> WHISPER_INJAA=sound("whisper_injaa");
+    public static final RegistryObject<SoundEvent> GIRL_ROAR=sound("girl_roar");
+    public static final RegistryObject<SoundEvent> POWER_DOWN=sound("power_down");
 
     private static RegistryObject<SoundEvent> sound(String id){
         return SOUNDS.register(id,()->SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID,id)));
@@ -91,7 +101,9 @@ public class Train31Mod {
                 .then(Commands.literal("set")
                         .then(Commands.literal("start").executes(c->{SceneSetup.markStart(c.getSource().getPlayerOrException());return 1;}))
                         .then(Commands.literal("cctv").executes(c->{SceneSetup.markCctv(c.getSource().getPlayerOrException());return 1;}))
-                        .then(Commands.literal("platform").executes(c->{SceneSetup.markPlatform(c.getSource().getPlayerOrException());return 1;})))
+                        .then(Commands.literal("platform").executes(c->{SceneSetup.markPlatform(c.getSource().getPlayerOrException());return 1;}))
+                        .then(Commands.literal("rail").executes(c->{SceneSetup.markRail(c.getSource().getPlayerOrException());return 1;}))
+                        .then(Commands.literal("tunnel").executes(c->{SceneSetup.markTunnel(c.getSource().getPlayerOrException());return 1;})))
                 .then(Commands.literal("setup").executes(c->{SceneSetup.status(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("clearsetup").executes(c->{SceneSetup.clear(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("prepare").executes(c->{StationBuilder.prepare(c.getSource().getPlayerOrException());return 1;}))
