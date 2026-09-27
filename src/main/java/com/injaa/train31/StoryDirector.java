@@ -2,199 +2,214 @@ package com.injaa.train31;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Cinematic, location-aware Train 31 story. No chat/action-bar narration: the scene is told by sound,
+ * lighting, live CCTV, fog, the actor and the moving train. The only normal HUD element is the clock.
+ */
 public final class StoryDirector {
     private StoryDirector() {}
     private static final Map<UUID, State> STATES = new HashMap<>();
 
-    private static class State {
+    private static final class State {
         int tick;
-        final BlockPos origin;
-        UUID shadow;
-        UUID passenger;
-        State(int tick, BlockPos origin) { this.tick=tick; this.origin=origin; }
+        float fog;
+        UUID girl;
+        boolean cctvAuto;
+        int cctvUntil;
+        double trainOffset = 62.0;
+        boolean trainSpawned;
+        State(int delayTicks) { tick = -delayTicks; }
     }
 
     public static void start(ServerPlayer player, int delaySeconds) {
         if (STATES.containsKey(player.getUUID())) return;
-
-        long packed = player.getPersistentData().getLong("train31_origin");
-        if (packed == 0L) {
-            StationBuilder.build(player);
-            packed = player.getPersistentData().getLong("train31_origin");
-        }
-        BlockPos o = BlockPos.of(packed);
-        StationBuilder.removeTrain(player.serverLevel(), o);
-        StationBuilder.buildCctvRoom(player.serverLevel());
-        StationBuilder.setCctvFeed(player.serverLevel(),0);
-        STATES.put(player.getUUID(), new State(-delaySeconds*20, o));
-        player.sendSystemMessage(Component.literal("§c[Train 31: Tokyo Edition] §fAUTO armed — §e" + delaySeconds + "s§f recording delay."));
+        StationBuilder.ensurePrepared(player);
+        StationBuilder.exitCamera(player);
+        StationBuilder.removeTrain(player.serverLevel(), StationBuilder.geometry(player).rail());
+        State s = new State(Math.max(0,delaySeconds)*20);
+        STATES.put(player.getUUID(), s);
+        sync(player,s,-1,false);
     }
 
+    public static boolean isRunning(ServerPlayer p){ return STATES.containsKey(p.getUUID()); }
+    public static int currentTick(ServerPlayer p){ State s=STATES.get(p.getUUID()); return s==null?0:s.tick; }
+    public static float currentFog(ServerPlayer p){ State s=STATES.get(p.getUUID()); return s==null?0f:s.fog; }
+
     public static void tick(ServerPlayer player) {
-        State s=STATES.get(player.getUUID());
-        if(s==null) return;
+        State s=STATES.get(player.getUUID()); if(s==null)return;
         s.tick++;
         ServerLevel level=player.serverLevel();
+        StationBuilder.RailGeometry g=StationBuilder.geometry(player);
         int t=s.tick;
 
-        if(t==0) say(player,"§7[11:45 PM] Night shift started. Platform 3 is out of service.");
+        if(t<0){ if(t%20==0)sync(player,s,-1,false); return; }
 
-        if(t>=180 && t<=300 && t%20==0){
-            player.addEffect(new MobEffectInstance(MobEffects.DARKNESS,10,0,false,false));
-            sound(level,player.blockPosition(),SoundEvents.LEVER_CLICK,0.75f);
+        // 0:00-1:20 — ordinary late-night station. No horror yet.
+        if(t==200) StationBuilder.lightPulse(player,true);
+        if(t==204) StationBuilder.lightPulse(player,false);
+        if(t==360) StationBuilder.lightPulse(player,true);
+        if(t==364) StationBuilder.lightPulse(player,false);
+        if(t==420) play(level,g.rail(),Train31Mod.FLUORESCENT_BUZZ.get(),1.1f,1.0f);
+        if(t==1200) play(level,g.rail(),Train31Mod.PA_NORMAL.get(),4.0f,1.0f);
+
+        // 1:20-3:00 — small physical signs that something is wrong.
+        if(t==1750 || t==2050) {
+            BlockPos p=g.axisZ()?g.rail().offset(4,0,18):g.rail().offset(18,0,4);
+            play(level,p,Train31Mod.METAL_KNOCKS.get(),1.7f,0.95f);
         }
-        if(t==180) say(player,"§eThe station lights begin to flicker...");
-
-        if(t==400){
-            sound(level,s.origin,Train31Mod.PA_FEMALE.get(),1.0f);
-            say(player,"§fPA: §7Attention please. The last service has ended. Please leave the station.");
-        }
-
-        if(t>=600 && t<1000 && t%10==0) fog(level,player,1);
-        if(t>=1000 && t<1400 && t%8==0) fog(level,player,2);
-        if(t>=1400 && t<1800 && t%5==0) fog(level,player,3);
-        if(t==600) say(player,"§7A thin white fog begins crawling along the platform...");
-        if(t==1000) say(player,"§7The fog is getting thicker. The far end of the station disappears.");
-        if(t==1400) say(player,"§8The fog is now almost impossible to see through.");
-
-        if(t==1800){
-            player.removeEffect(MobEffects.DARKNESS);
-            StationBuilder.teleportToCctv(player);
-            sound(level,StationBuilder.CCTV_ROOM,SoundEvents.IRON_DOOR_CLOSE,0.7f);
-            say(player,"§bCCTV SECURITY ROOM §7— You don't remember walking in here.");
+        if(t==2200) {
+            BlockPos room=StationBuilder.cctvRoom(player);
+            play(level,room,Train31Mod.CAMERA_CLICK.get(),1.6f,1.0f);
         }
 
-        if(t==2000){ StationBuilder.setCctvFeed(level,1); sound(level,StationBuilder.CCTV_ROOM,SoundEvents.NOTE_BLOCK_HAT.value(),0.6f); say(player,"§bCAM 03: §fMovement detected on Platform 3."); }
-        if(t==2200){ StationBuilder.setCctvFeed(level,2); sound(level,StationBuilder.CCTV_ROOM,SoundEvents.NOTE_BLOCK_HAT.value(),0.5f); say(player,"§7The figure is closer on the monitor."); }
-        if(t==2400){ StationBuilder.setCctvFeed(level,3); sound(level,StationBuilder.CCTV_ROOM,SoundEvents.NOTE_BLOCK_BASS.value(),0.5f); say(player,"§8It is standing directly in front of Camera 03."); }
-        if(t==2550){ StationBuilder.setCctvFeed(level,4); sound(level,StationBuilder.CCTV_ROOM,SoundEvents.REDSTONE_TORCH_BURNOUT,0.7f); say(player,"§cCAM 03 — SIGNAL LOST"); }
-        if(t==2700){ sound(level,StationBuilder.CCTV_ROOM.offset(0,0,-5),SoundEvents.IRON_DOOR_CLOSE,0.55f); say(player,"§7...knock... knock... from the security-room door."); }
-        if(t==3000){
-            StationBuilder.returnToStation(player);
-            StationBuilder.setCctvFeed(level,0);
-            say(player,"§7The station is back... but the fog is gone.");
+        // 3:00-4:10 — first sighting exists ONLY on the real CCTV view.
+        if(t==3600) {
+            spawnGirl(level,s, cameraScenePos(g,0));
+            BlockPos room=StationBuilder.cctvRoom(player);
+            play(level,room,Train31Mod.CCTV_STATIC.get(),1.0f,1.0f);
+        }
+        if(t>=3600 && t<3900 && !s.cctvAuto && player.blockPosition().closerThan(StationBuilder.cctvRoom(player),12.0)) {
+            StationBuilder.enterCamera(player,2);
+            s.cctvAuto=true; s.cctvUntil=t+260;
+        }
+        if(t==3740) moveGirl(level,s.girl,cameraScenePos(g,1));
+        if(t==3840) moveGirl(level,s.girl,cameraScenePos(g,2));
+        if(s.cctvAuto && t==s.cctvUntil) {
+            play(level,StationBuilder.cctvRoom(player),Train31Mod.CCTV_STATIC.get(),1.6f,0.82f);
+            remove(level,s.girl); s.girl=null;
+            StationBuilder.exitCamera(player); s.cctvAuto=false;
         }
 
-        if(t==3200){ spawnActor(level,s,"shadow",s.origin.offset(0,0,38)); say(player,"§8The same figure from Camera 03 is now at the far end of Platform 3."); }
-        if(t==4300){ sound(level,s.origin.offset(4,-1,12),SoundEvents.IRON_DOOR_CLOSE,0.55f); say(player,"§7...knock... knock... from below the platform."); }
-        if(t==5400){ say(player,"§bCCTV CAM 03: §fMotion detected again."); moveActor(level,s.shadow,s.origin.offset(0,0,25)); }
-        if(t==6500){ sound(level,s.origin,SoundEvents.NOTE_BLOCK_BASS.value(),0.5f); say(player,"§7Radio: Don't board it. Whatever happens, don't board Train 31."); }
-        if(t==7700){ sound(level,s.origin.offset(5,0,58),SoundEvents.ANVIL_LAND,0.35f); say(player,"§8A distant metallic horn rolls through the tunnel."); }
+        // 4:10-6:30 — proper world fog, not a cloud-particle wall. It slowly steals view distance.
+        if(t>=5000 && t<7800) {
+            s.fog = Math.min(0.92f,(t-5000)/2800f*0.92f);
+            if(t%40==0) lowMist(level,g.rail(),g.axisZ(),s.fog);
+        }
+        if(t==5150) play(level,g.rail(),Train31Mod.TUNNEL_RUMBLE.get(),1.4f,0.82f);
+        if(t==5480) play(level,g.rail(),Train31Mod.METAL_KNOCKS.get(),2.0f,0.82f);
+        if(t==5750) {
+            remove(level,s.girl);
+            spawnGirl(level,s,fogGirlPos(g,24));
+        }
+        if(t>=5850 && t<7400 && t%80==0 && s.girl!=null) advanceGirlWhenUnseen(player,level,s,g);
+        if(t==6500) play(level,g.rail(),Train31Mod.PA_TRAIN31.get(),4.5f,0.98f);
+        if(t==7000) play(level,tunnelPos(g,42),Train31Mod.TRAIN_HORN.get(),3.2f,0.88f);
 
-        if(t==8500){
-            for(int i=0;i<10;i++) level.sendParticles(
-                    ParticleTypes.CAMPFIRE_COSY_SMOKE,
-                    s.origin.getX()+5.0,
-                    s.origin.getY()+1.2,
-                    s.origin.getZ()+52+i*1.5,
-                    8,0.5,0.35,0.5,0.008);
-            say(player,"§7A white headlight appears deep inside the tunnel...");
+        // 6:30-8:00 — fog peaks, figure vanishes, then the tunnel becomes unnaturally quiet.
+        if(t>=7800 && t<9300) s.fog=0.94f;
+        if(t==7900){remove(level,s.girl);s.girl=null;}
+        if(t==8200) StationBuilder.lightPulse(player,true);
+        if(t==8240) StationBuilder.lightPulse(player,false);
+        if(t==8600) play(level,tunnelPos(g,48),Train31Mod.TUNNEL_RUMBLE.get(),2.2f,0.68f);
+
+        // 8:00-10:00 — Train 31 actually approaches and stops next to the detected platform/rail.
+        if(t==9600){
+            s.trainOffset=62.0; StationBuilder.spawnTrain(level,g,s.trainOffset); s.trainSpawned=true;
+            play(level,tunnelPos(g,50),Train31Mod.TRAIN_HORN.get(),3.5f,0.76f);
+        }
+        if(t>=9600 && t<11100 && s.trainSpawned){
+            double target=4.2;
+            double progress=(t-9600)/1500.0;
+            double eased=1.0-Math.pow(1.0-Math.min(1,progress),3);
+            double next=62.0+(target-62.0)*eased;
+            StationBuilder.setTrainOffset(level,g,s.trainOffset,next); s.trainOffset=next;
+            if(t%100==0) play(level,g.rail(),Train31Mod.TUNNEL_RUMBLE.get(),1.1f,0.72f+(float)progress*0.14f);
+        }
+        if(t==11200){ StationBuilder.openTrainDoors(level,g); s.fog=0.48f; }
+
+        // 10:00-12:15 — no immediate attack. The girl appears where the train windows/cameras frame her.
+        if(t==12100) spawnGirl(level,s,platformGirlPos(g,16));
+        if(t==12600) moveGirl(level,s.girl,platformGirlPos(g,10));
+        if(t==13000 && player.blockPosition().closerThan(StationBuilder.cctvRoom(player),13.0)) {
+            StationBuilder.enterCamera(player,1); s.cctvAuto=true; s.cctvUntil=t+220;
+        }
+        if(t==13100) moveGirl(level,s.girl,platformGirlPos(g,5));
+        if(s.cctvAuto && t==s.cctvUntil){ StationBuilder.exitCamera(player); s.cctvAuto=false; }
+        if(t==13700){ remove(level,s.girl); s.girl=null; play(level,g.rail(),Train31Mod.CCTV_STATIC.get(),1.4f,0.7f); }
+
+        // 12:15-14:10 — only now does the direct chase begin.
+        if(t==14700){ s.fog=0.78f; spawnGirl(level,s,platformGirlPos(g,22)); }
+        if(t>=14900 && t<16600 && s.girl!=null){
+            Entity e=level.getEntity(s.girl);
+            if(e instanceof ShadowGirlEntity girl) girl.getNavigation().moveTo(player,0.88D);
+            if(t%140==0) play(level,e!=null?e.blockPosition():g.rail(),Train31Mod.METAL_KNOCKS.get(),0.9f,0.65f);
         }
 
-        if(t==9200){
-            removeEntity(level,s.shadow); s.shadow=null;
-            StationBuilder.buildTrain(level,s.origin);
-            sound(level,s.origin.offset(5,0,14),SoundEvents.PISTON_EXTEND,0.35f);
-            say(player,"§cTRAIN 31 §fhas arrived at Platform 3.");
+        // 14:10-15:00 — silence, return, departure. No exposition text.
+        if(t==16900){ remove(level,s.girl); s.girl=null; s.fog=0f; StationBuilder.lightPulse(player,false); }
+        if(t==17300 && s.trainSpawned) StationBuilder.closeTrainVisual(level,g);
+        if(t>=17400 && t<18000 && s.trainSpawned){
+            double next=s.trainOffset+0.11;
+            StationBuilder.setTrainOffset(level,g,s.trainOffset,next);s.trainOffset=next;
         }
-        if(t==10000){ StationBuilder.openTrainDoors(level,s.origin); say(player,"§cThe doors open. §7No one gets off."); }
-        if(t==10800){ spawnActor(level,s,"passenger",s.origin.offset(1,0,18)); say(player,"§8You look away for one second. A passenger is now standing on the platform."); }
-        if(t==12000){ moveActor(level,s.passenger,s.origin.offset(1,0,11)); say(player,"§bCCTV: §fThe passenger moved while you weren't looking."); }
-        if(t==13100){ say(player,"§6OLD REPORT — 1998: §fTrain 31 entered with one more passenger than it departed with."); }
-        if(t==14100){ sound(level,s.origin,SoundEvents.IRON_DOOR_CLOSE,0.5f); say(player,"§cEMERGENCY LOCKDOWN. §fStation exits sealed."); }
-        if(t==15000){ say(player,"§7Radio: I never told you I escaped."); moveActor(level,s.passenger,s.origin.offset(1,0,5)); }
-        if(t==15800){ say(player,"§cRUN. §fGet back through the station before it reaches you."); sound(level,s.origin,SoundEvents.ENDERMAN_STARE,0.45f); }
+        if(t==17500) play(level,g.rail(),Train31Mod.PA_NORMAL.get(),3.5f,0.92f);
+        if(t>=18000){ reset(player); return; }
 
-        if(t==16900){
-            removeEntity(level,s.passenger); s.passenger=null;
-            say(player,"§f[1:00 AM] Everything stops.");
-        }
-        if(t==17400){ say(player,"§8The passenger calmly steps back into Train 31."); }
-        if(t==17700){ StationBuilder.removeTrain(level,s.origin); sound(level,s.origin.offset(5,0,14),SoundEvents.PISTON_EXTEND,0.25f); say(player,"§7Train 31 disappears into the tunnel."); }
-        if(t==17900){ say(player,"§cAttention please. Train 31 will return tomorrow."); }
-        if(t>18100){ STATES.remove(player.getUUID()); }
+        if(t%10==0) sync(player,s,-1,false);
     }
 
     public static void reset(ServerPlayer player){
         State s=STATES.remove(player.getUUID());
-        BlockPos o = s != null ? s.origin : StationBuilder.TOKYO_ANCHOR;
-        if(s!=null){ removeEntity(player.serverLevel(),s.shadow); removeEntity(player.serverLevel(),s.passenger); }
-        player.removeEffect(MobEffects.DARKNESS);
-        StationBuilder.removeTrain(player.serverLevel(),o);
-        StationBuilder.setCctvFeed(player.serverLevel(),0);
-        StationBuilder.returnToStation(player);
-        player.sendSystemMessage(Component.literal("§a[Train 31] Tokyo story reset. Ready for another take."));
+        if(s!=null){ remove(player.serverLevel(),s.girl); }
+        StationBuilder.restoreLights(player);
+        StationBuilder.exitCamera(player);
+        StationBuilder.removeTrain(player.serverLevel(),StationBuilder.geometry(player).rail());
+        Train31Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),new Train31Network.ClientState(0,0f,-1,false,false));
     }
 
-    public static void skip(ServerPlayer player){
-        State s=STATES.get(player.getUUID());
-        if(s!=null){ s.tick+=1200; player.sendSystemMessage(Component.literal("§e[Train 31] Skipped ~60 seconds.")); }
+    public static void skip(ServerPlayer player){ State s=STATES.get(player.getUUID()); if(s!=null)s.tick+=1200; }
+
+    private static void sync(ServerPlayer p,State s,int camera,boolean cctv){
+        Train31Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> p),new Train31Network.ClientState(Math.max(0,s.tick),s.fog,camera,cctv,true));
     }
 
-    private static void fog(ServerLevel level, ServerPlayer player, int intensity){
-        int count = intensity==1 ? 10 : intensity==2 ? 22 : 42;
-        double spread = intensity==1 ? 3.0 : intensity==2 ? 2.6 : 2.0;
-        level.sendParticles(ParticleTypes.CLOUD,player.getX(),player.getY()+1.0,player.getZ(),count,spread,0.9,spread,0.01);
-        level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,player.getX(),player.getY()+0.6,player.getZ(),Math.max(2,count/5),spread,0.5,spread,0.005);
-        if(intensity>=2) player.addEffect(new MobEffectInstance(MobEffects.DARKNESS,30,0,false,false));
+    private static void play(ServerLevel l,BlockPos p,SoundEvent sound,float volume,float pitch){
+        l.playSound(null,p,sound,SoundSource.AMBIENT,volume,pitch);
     }
 
-    private static void spawnActor(ServerLevel level, State s, String kind, BlockPos p){
-        ArmorStand e = EntityType.ARMOR_STAND.create(level);
-        if(e==null) return;
-        e.setInvulnerable(true);
-        e.setSilent(true);
-        e.setNoBasePlate(true);
-        e.setShowArms(true);
-        e.setYRot(180.0f);
-        e.setPos(p.getX()+0.5,p.getY(),p.getZ()+0.5);
-
-        ItemStack chest = blackLeather(Items.LEATHER_CHESTPLATE);
-        ItemStack legs = blackLeather(Items.LEATHER_LEGGINGS);
-        ItemStack boots = blackLeather(Items.LEATHER_BOOTS);
-        e.setItemSlot(EquipmentSlot.HEAD,new ItemStack(Items.WITHER_SKELETON_SKULL));
-        e.setItemSlot(EquipmentSlot.CHEST,chest);
-        e.setItemSlot(EquipmentSlot.LEGS,legs);
-        e.setItemSlot(EquipmentSlot.FEET,boots);
-        e.addTag("train31_actor");
-        level.addFreshEntity(e);
-        if(kind.equals("shadow")) s.shadow=e.getUUID(); else s.passenger=e.getUUID();
+    private static void lowMist(ServerLevel l,BlockPos rail,boolean axisZ,float amount){
+        int count=1+(int)(amount*3);
+        for(int i=0;i<count;i++){
+            double along=(l.random.nextDouble()-0.5)*42;
+            double side=(l.random.nextDouble()-0.5)*7;
+            double x=rail.getX()+0.5+(axisZ?side:along), z=rail.getZ()+0.5+(axisZ?along:side);
+            l.sendParticles(ParticleTypes.WHITE_ASH,x,rail.getY()+0.35,z,1,0.25,0.08,0.25,0.002);
+        }
     }
 
-    private static ItemStack blackLeather(net.minecraft.world.item.Item item){
-        ItemStack stack = new ItemStack(item);
-        stack.getOrCreateTagElement("display").putInt("color",0x050505);
-        return stack;
+    private static void spawnGirl(ServerLevel l,State s,BlockPos p){
+        remove(l,s.girl);
+        ShadowGirlEntity girl=Train31Mod.SHADOW_GIRL.get().create(l); if(girl==null)return;
+        girl.setPos(p.getX()+0.5,p.getY(),p.getZ()+0.5);girl.setYRot(180f);girl.setYHeadRot(180f);girl.setInvulnerable(true);
+        girl.addTag("train31_girl");l.addFreshEntity(girl);s.girl=girl.getUUID();
     }
+    private static void moveGirl(ServerLevel l,UUID id,BlockPos p){Entity e=id==null?null:l.getEntity(id);if(e!=null)e.teleportTo(p.getX()+0.5,p.getY(),p.getZ()+0.5);}
+    private static void remove(ServerLevel l,UUID id){Entity e=id==null?null:l.getEntity(id);if(e!=null)e.discard();}
 
-    private static void moveActor(ServerLevel level, UUID id, BlockPos p){
-        Entity e=id==null?null:level.getEntity(id);
-        if(e!=null) e.teleportTo(p.getX()+0.5,p.getY(),p.getZ()+0.5);
+    private static BlockPos cameraScenePos(StationBuilder.RailGeometry g,int stage){int d=stage==0?30:stage==1?18:7;return platformGirlPos(g,d);}
+    private static BlockPos platformGirlPos(StationBuilder.RailGeometry g,int along){return g.axisZ()?g.rail().offset(-5,1,along):g.rail().offset(along,1,-5);}
+    private static BlockPos fogGirlPos(StationBuilder.RailGeometry g,int along){return g.axisZ()?g.rail().offset(-4,1,along):g.rail().offset(along,1,-4);}
+    private static BlockPos tunnelPos(StationBuilder.RailGeometry g,int along){return g.axisZ()?g.rail().offset(0,0,along):g.rail().offset(along,0,0);}
+
+    private static void advanceGirlWhenUnseen(ServerPlayer p,ServerLevel level,State s,StationBuilder.RailGeometry g){
+        Entity e=level.getEntity(s.girl);if(e==null)return;
+        Vec3 to=e.position().subtract(p.position());double len=to.length();if(len<3)return;
+        double dot=p.getLookAngle().normalize().dot(to.normalize());
+        if(dot<0.55){
+            Vec3 next=e.position().add(p.position().subtract(e.position()).normalize().scale(Math.min(3.2,len-2.5)));
+            e.teleportTo(next.x,next.y,next.z);
+        }
     }
-
-    private static void removeEntity(ServerLevel level, UUID id){
-        Entity e=id==null?null:level.getEntity(id);
-        if(e!=null) e.discard();
-    }
-
-    private static void say(ServerPlayer p,String msg){ p.displayClientMessage(Component.literal(msg),true); }
-    private static void sound(ServerLevel l,BlockPos p,net.minecraft.sounds.SoundEvent s,float pitch){ l.playSound(null,p,s,SoundSource.AMBIENT,1.35f,pitch); }
 }
