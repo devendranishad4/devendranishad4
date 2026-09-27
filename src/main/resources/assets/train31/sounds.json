@@ -10,16 +10,16 @@
   "train_roll": {"sounds":[{"name":"train31:train_roll","stream":true}]},
   "train_brakes": {"sounds":[{"name":"train31:train_brakes","stream":false}]},
   "door_chime": {"sounds":[{"name":"train31:door_chime","stream":false}]},
-  "whisper_injaa": {"sounds":[
-    {"name":"train31:whisper_injaa","stream":false,"weight":3},
-    {"name":"train31:whisper_behind","stream":false,"weight":2},
-    {"name":"train31:whisper_here","stream":false,"weight":2},
-    {"name":"train31:whisper_die_here","stream":false,"weight":2},
-    {"name":"train31:whisper_see_you","stream":false,"weight":2},
-    {"name":"train31:whisper_found_you","stream":false,"weight":2},
-    {"name":"train31:whisper_cant_leave","stream":false,"weight":2},
-    {"name":"train31:whisper_final","stream":false,"weight":1}
-  ]},
+
+  "whisper_injaa": {"sounds":[{"name":"train31:whisper_injaa","stream":false}]},
+  "whisper_behind": {"sounds":[{"name":"train31:whisper_behind","stream":false}]},
+  "whisper_here": {"sounds":[{"name":"train31:whisper_here","stream":false}]},
+  "whisper_die_here": {"sounds":[{"name":"train31:whisper_die_here","stream":false}]},
+  "whisper_see_you": {"sounds":[{"name":"train31:whisper_see_you","stream":false}]},
+  "whisper_found_you": {"sounds":[{"name":"train31:whisper_found_you","stream":false}]},
+  "whisper_cant_leave": {"sounds":[{"name":"train31:whisper_cant_leave","stream":false}]},
+  "whisper_final": {"sounds":[{"name":"train31:whisper_final","stream":false}]},
+
   "girl_roar": {"sounds":[{"name":"train31:girl_roar","stream":false}]},
   "power_down": {"sounds":[{"name":"train31:power_down","stream":false}]},
   "horror_swell": {"sounds":[{"name":"train31:horror_swell","stream":false}]},
