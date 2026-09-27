@@ -1,0 +1,40 @@
+name: Train31 Female Voice Samples
+
+on:
+  push:
+    branches: [ "train31-cinematic-v2" ]
+    paths:
+      - ".github/workflows/voice-samples.yml"
+  workflow_dispatch:
+
+jobs:
+  samples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install audio tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install --quiet edge-tts
+      - name: Generate three female horror voice samples
+        run: |
+          mkdir -p voice_samples
+
+          # 1) Young, soft, natural female whisper
+          edge-tts --voice en-US-JennyNeural --rate=-28% --pitch=+4Hz --text "Injaa... Don't turn around... I can see you..." --write-media /tmp/soft.mp3
+          ffmpeg -y -loglevel error -i /tmp/soft.mp3 -af "highpass=f=150,lowpass=f=5200,aecho=0.8:0.18:145:0.10,volume=1.12" -codec:a libmp3lame -q:a 2 voice_samples/01_Soft_Female_Whisper.mp3
+
+          # 2) Calm/cold adult female, creepy but clearly female
+          edge-tts --voice en-US-AriaNeural --rate=-34% --pitch=+1Hz --text "Injaa... You should not be here... You can't leave..." --write-media /tmp/cold.mp3
+          ffmpeg -y -loglevel error -i /tmp/cold.mp3 -af "highpass=f=145,lowpass=f=4700,aecho=0.8:0.20:175:0.13,volume=1.10" -codec:a libmp3lame -q:a 2 voice_samples/02_Cold_Ghost_Female.mp3
+
+          # 3) British female, soft cinematic J-horror style treatment
+          edge-tts --voice en-GB-SoniaNeural --rate=-30% --pitch=+3Hz --text "Injaa... I found you... Don't turn around..." --write-media /tmp/story.mp3
+          ffmpeg -y -loglevel error -i /tmp/story.mp3 -af "highpass=f=155,lowpass=f=5000,aecho=0.8:0.16:155:0.11,volume=1.12" -codec:a libmp3lame -q:a 2 voice_samples/03_Cinematic_Female.mp3
+
+      - name: Upload MP3 samples
+        uses: actions/upload-artifact@v4
+        with:
+          name: Train31-Female-Voice-Samples
+          path: voice_samples/*.mp3
