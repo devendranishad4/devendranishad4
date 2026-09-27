@@ -5,186 +5,276 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.level.Heightmap;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraftforge.network.PacketDistributor;
 
-import java.util.List;
+import java.util.*;
 
+/** Map-aware scene setup for the real Tokyo Inspired City subway. */
 public final class StationBuilder {
     private StationBuilder() {}
-
     public static final BlockPos TOKYO_ANCHOR = new BlockPos(-92, 61, 213);
-    // Hidden off-map set used as the Train 31 CCTV/security room.
-    public static final BlockPos CCTV_ROOM = new BlockPos(-5000, 200, -5000);
-
+    private static final String CAMERA_TAG = "train31_camera";
     private static final String TRAIN_TAG = "train31_train";
     private static final String DOOR_TAG = "train31_door";
+    private static final Map<UUID, List<UUID>> CAMERAS = new HashMap<>();
 
-    public static void build(ServerPlayer player) {
+    public record RailGeometry(BlockPos rail, boolean axisZ) {}
+
+    public static void prepare(ServerPlayer player) {
         ServerLevel level = player.serverLevel();
-        BlockPos origin = TOKYO_ANCHOR;
-        player.getPersistentData().putLong("train31_origin", origin.asLong());
-        removeTrain(level, origin);
-        buildCctvRoom(level);
-        player.teleportTo(level, origin.getX() + 0.5, origin.getY() + 0.05, origin.getZ() + 0.5, 0.0F, 0.0F);
-        player.sendSystemMessage(Component.literal("§a[Train 31: Tokyo Edition] §fLinked to the real Tokyo subway at §e-92 61 213§f."));
-        player.sendSystemMessage(Component.literal("§7CCTV set is ready. Crouch + right-click Director when ready to record."));
+        cleanupCameras(level, player);
+        removeTrain(level, TOKYO_ANCHOR);
+
+        RailGeometry rail = findRail(level, TOKYO_ANCHOR);
+        BlockPos outside = findSurfaceStart(level, TOKYO_ANCHOR);
+        BlockPos room = findSecurityRoom(level, rail.rail());
+
+        player.getPersistentData().putLong("train31_rail", rail.rail().asLong());
+        player.getPersistentData().putBoolean("train31_axis_z", rail.axisZ());
+        player.getPersistentData().putLong("train31_outside", outside.asLong());
+        player.getPersistentData().putLong("train31_cctv", room.asLong());
+        player.getPersistentData().putBoolean("train31_prepared", true);
+
+        buildMonitorBank(level, room);
+        spawnCameras(level, player, rail);
+        teleportOutside(player);
     }
 
-    public static void setRedMode(ServerLevel level, BlockPos origin, boolean red) {
-        // Tokyo station remains untouched.
+    public static void ensurePrepared(ServerPlayer player) {
+        if (!player.getPersistentData().getBoolean("train31_prepared") || !CAMERAS.containsKey(player.getUUID())) prepare(player);
     }
 
-    public static void buildCctvRoom(ServerLevel level) {
-        BlockPos o = CCTV_ROOM;
-        // sealed room 15x7x13
-        fill(level, o.offset(-7,0,-6), o.offset(7,0,6), Blocks.POLISHED_DEEPSLATE.defaultBlockState());
-        fill(level, o.offset(-7,6,-6), o.offset(7,6,6), Blocks.DEEPSLATE_TILES.defaultBlockState());
-        fill(level, o.offset(-7,1,-6), o.offset(-7,5,6), Blocks.DEEPSLATE_BRICKS.defaultBlockState());
-        fill(level, o.offset(7,1,-6), o.offset(7,5,6), Blocks.DEEPSLATE_BRICKS.defaultBlockState());
-        fill(level, o.offset(-7,1,-6), o.offset(7,5,-6), Blocks.DEEPSLATE_BRICKS.defaultBlockState());
-        fill(level, o.offset(-7,1,6), o.offset(7,5,6), Blocks.DEEPSLATE_BRICKS.defaultBlockState());
-        clear(level, o.offset(-6,1,-5), o.offset(6,5,5));
-
-        // desk
-        fill(level, o.offset(-4,1,1), o.offset(4,1,2), Blocks.DARK_OAK_PLANKS.defaultBlockState());
-        fill(level, o.offset(-4,2,2), o.offset(4,2,2), Blocks.BLACK_CONCRETE.defaultBlockState());
-
-        // Main CCTV monitor on +Z wall.
-        fill(level, o.offset(-5,1,5), o.offset(5,5,5), Blocks.BLACK_CONCRETE.defaultBlockState());
-        fill(level, o.offset(-4,2,4), o.offset(4,4,4), Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState());
-        fill(level, o.offset(-4,2,4), o.offset(4,2,4), Blocks.GRAY_CONCRETE.defaultBlockState());
-        set(level, o.offset(-5,5,4), Blocks.REDSTONE_LAMP.defaultBlockState());
-        set(level, o.offset(5,5,4), Blocks.REDSTONE_LAMP.defaultBlockState());
-
-        // Two side monitors.
-        fill(level, o.offset(-6,2,3), o.offset(-5,4,3), Blocks.CYAN_STAINED_GLASS.defaultBlockState());
-        fill(level, o.offset(5,2,3), o.offset(6,4,3), Blocks.CYAN_STAINED_GLASS.defaultBlockState());
-
-        // security-room props
-        fill(level, o.offset(-6,1,-3), o.offset(-5,3,-1), Blocks.IRON_BLOCK.defaultBlockState());
-        fill(level, o.offset(5,1,-3), o.offset(6,3,-1), Blocks.BARREL.defaultBlockState());
-        set(level, o.offset(0,5,0), Blocks.SEA_LANTERN.defaultBlockState());
-
-        setCctvFeed(level, 0);
+    public static void teleportOutside(ServerPlayer player) {
+        BlockPos p = BlockPos.of(player.getPersistentData().getLong("train31_outside"));
+        if (p.equals(BlockPos.ZERO)) p = findSurfaceStart(player.serverLevel(), TOKYO_ANCHOR);
+        player.teleportTo(player.serverLevel(), p.getX()+0.5, p.getY()+0.1, p.getZ()+0.5, 0f, 8f);
     }
 
-    public static void teleportToCctv(ServerPlayer player) {
-        buildCctvRoom(player.serverLevel());
-        BlockPos o = CCTV_ROOM;
-        player.teleportTo(player.serverLevel(), o.getX()+0.5, o.getY()+1.1, o.getZ()-1.5, 0.0F, 0.0F);
+    public static RailGeometry geometry(ServerPlayer player) {
+        long packed = player.getPersistentData().getLong("train31_rail");
+        BlockPos rail = packed == 0 ? findRail(player.serverLevel(), TOKYO_ANCHOR).rail() : BlockPos.of(packed);
+        return new RailGeometry(rail, player.getPersistentData().getBoolean("train31_axis_z"));
     }
 
-    public static void returnToStation(ServerPlayer player) {
-        BlockPos o = TOKYO_ANCHOR;
-        player.teleportTo(player.serverLevel(), o.getX()+0.5, o.getY()+0.05, o.getZ()+0.5, 0.0F, 0.0F);
+    public static BlockPos cctvRoom(ServerPlayer player) {
+        long packed = player.getPersistentData().getLong("train31_cctv");
+        return packed == 0 ? TOKYO_ANCHOR.offset(8,1,0) : BlockPos.of(packed);
     }
 
-    /**
-     * Scripted monitor feed: stage 0 empty platform, 1 far silhouette,
-     * 2 mid-distance, 3 very close, 4 signal lost.
-     */
-    public static void setCctvFeed(ServerLevel level, int stage) {
-        BlockPos o = CCTV_ROOM;
-        if (stage == 4) {
-            fill(level, o.offset(-4,2,4), o.offset(4,4,4), Blocks.BLACK_CONCRETE.defaultBlockState());
-            for (int x=-4;x<=4;x+=2) set(level, o.offset(x,3,4), Blocks.WHITE_CONCRETE.defaultBlockState());
-            return;
+    public static boolean isMonitorClick(ServerPlayer player, BlockPos clicked) {
+        BlockPos c = cctvRoom(player);
+        return Math.abs(clicked.getX()-c.getX()) <= 5 && Math.abs(clicked.getY()-c.getY()) <= 4 && Math.abs(clicked.getZ()-c.getZ()) <= 5;
+    }
+
+    public static void cycleCamera(ServerPlayer player) {
+        ensurePrepared(player);
+        int index = player.getPersistentData().getInt("train31_cam_index");
+        index = (index + 1) % 4;
+        player.getPersistentData().putInt("train31_cam_index", index);
+        enterCamera(player, index);
+    }
+
+    public static void enterCamera(ServerPlayer player, int index) {
+        ensurePrepared(player);
+        List<UUID> list = CAMERAS.get(player.getUUID());
+        if (list == null || list.isEmpty()) return;
+        index = Math.floorMod(index, list.size());
+        Entity e = player.serverLevel().getEntity(list.get(index));
+        if (e == null) return;
+        int storyTick = StoryDirector.currentTick(player);
+        Train31Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new Train31Network.ClientState(Math.max(0,storyTick), StoryDirector.currentFog(player), e.getId(), true, StoryDirector.isRunning(player)));
+    }
+
+    public static void exitCamera(ServerPlayer player) {
+        Train31Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new Train31Network.ClientState(Math.max(0,StoryDirector.currentTick(player)), StoryDirector.currentFog(player), -1, false, StoryDirector.isRunning(player)));
+    }
+
+    private static void spawnCameras(ServerLevel level, ServerPlayer player, RailGeometry g) {
+        List<UUID> ids = new ArrayList<>();
+        BlockPos r = g.rail();
+        if (g.axisZ()) {
+            ids.add(spawnCamera(level, r.offset(-5,3,-18), 0f, 8f));
+            ids.add(spawnCamera(level, r.offset(5,3,12), 180f, 10f));
+            ids.add(spawnCamera(level, r.offset(-6,3,28), 180f, 8f));
+            ids.add(spawnCamera(level, r.offset(0,3,48), 180f, 5f));
+        } else {
+            ids.add(spawnCamera(level, r.offset(-18,3,-5), -90f, 8f));
+            ids.add(spawnCamera(level, r.offset(12,3,5), 90f, 10f));
+            ids.add(spawnCamera(level, r.offset(28,3,-6), 90f, 8f));
+            ids.add(spawnCamera(level, r.offset(48,3,0), 90f, 5f));
         }
+        CAMERAS.put(player.getUUID(), ids);
+    }
 
-        fill(level, o.offset(-4,2,4), o.offset(4,4,4), Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState());
-        fill(level, o.offset(-4,2,4), o.offset(4,2,4), Blocks.GRAY_CONCRETE.defaultBlockState());
+    private static UUID spawnCamera(ServerLevel level, BlockPos p, float yaw, float pitch) {
+        ArmorStand a = EntityType.ARMOR_STAND.create(level);
+        if (a == null) return UUID.randomUUID();
+        a.setInvisible(true);
+        a.setMarker(true);
+        a.setNoGravity(true);
+        a.setInvulnerable(true);
+        a.setSilent(true);
+        a.setPos(p.getX()+0.5,p.getY()+0.2,p.getZ()+0.5);
+        a.setYRot(yaw); a.setXRot(pitch); a.setYHeadRot(yaw);
+        a.addTag(CAMERA_TAG);
+        level.addFreshEntity(a);
+        return a.getUUID();
+    }
 
-        if (stage == 1) {
-            set(level, o.offset(3,3,4), Blocks.BLACK_CONCRETE.defaultBlockState());
-        } else if (stage == 2) {
-            set(level, o.offset(0,3,4), Blocks.BLACK_CONCRETE.defaultBlockState());
-            set(level, o.offset(0,4,4), Blocks.BLACK_CONCRETE.defaultBlockState());
-        } else if (stage == 3) {
-            fill(level, o.offset(-1,2,4), o.offset(1,4,4), Blocks.BLACK_CONCRETE.defaultBlockState());
+    private static void cleanupCameras(ServerLevel level, ServerPlayer player) {
+        List<UUID> ids = CAMERAS.remove(player.getUUID());
+        if (ids != null) for (UUID id : ids) { Entity e = level.getEntity(id); if (e != null) e.discard(); }
+        AABB box = new AABB(TOKYO_ANCHOR).inflate(90);
+        for (ArmorStand a : level.getEntitiesOfClass(ArmorStand.class, box, e -> e.getTags().contains(CAMERA_TAG))) a.discard();
+    }
+
+    private static RailGeometry findRail(ServerLevel level, BlockPos anchor) {
+        BlockPos best = null; double bestD = Double.MAX_VALUE;
+        for (int x=-30;x<=30;x++) for (int z=-30;z<=30;z++) for (int y=-5;y<=5;y++) {
+            BlockPos p=anchor.offset(x,y,z);
+            if (!level.getBlockState(p).is(BlockTags.RAILS)) continue;
+            double d=p.distSqr(anchor);
+            if(d<bestD){bestD=d;best=p;}
+        }
+        if(best==null) return new RailGeometry(anchor.offset(5,-1,0), true);
+        int zNeighbors=(isRail(level,best.north())?1:0)+(isRail(level,best.south())?1:0);
+        int xNeighbors=(isRail(level,best.east())?1:0)+(isRail(level,best.west())?1:0);
+        return new RailGeometry(best,zNeighbors>=xNeighbors);
+    }
+
+    private static boolean isRail(ServerLevel l, BlockPos p){return l.getBlockState(p).is(BlockTags.RAILS);}
+
+    private static BlockPos findSurfaceStart(ServerLevel level, BlockPos anchor) {
+        BlockPos best=null; double bestScore=-1e9;
+        for(int x=-48;x<=48;x+=2) for(int z=-48;z<=48;z+=2){
+            int wx=anchor.getX()+x, wz=anchor.getZ()+z;
+            int y=level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,wx,wz);
+            BlockPos p=new BlockPos(wx,y,wz);
+            if(y<anchor.getY()+5 || !level.canSeeSky(p)) continue;
+            int stairs=nearbyStairs(level,p);
+            BlockState ground=level.getBlockState(p.below());
+            double pathBonus=(ground.is(Blocks.STONE)||ground.is(Blocks.SMOOTH_STONE)||ground.is(Blocks.GRAY_CONCRETE)||ground.is(Blocks.LIGHT_GRAY_CONCRETE))?4:0;
+            double score=stairs*14.0+pathBonus-Math.sqrt(x*x+z*z)*0.12;
+            if(score>bestScore){bestScore=score;best=p;}
+        }
+        if(best!=null) return best;
+        int y=level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,anchor.getX(),anchor.getZ());
+        return new BlockPos(anchor.getX(),y,anchor.getZ());
+    }
+
+    private static int nearbyStairs(ServerLevel level,BlockPos p){
+        int n=0;
+        for(int x=-4;x<=4;x++) for(int z=-4;z<=4;z++) for(int y=-2;y<=2;y++)
+            if(level.getBlockState(p.offset(x,y,z)).getBlock() instanceof StairBlock)n++;
+        return n;
+    }
+
+    private static BlockPos findSecurityRoom(ServerLevel level, BlockPos rail) {
+        BlockPos best=null; int bestScore=-1;
+        for(int x=-34;x<=34;x+=2) for(int z=-34;z<=34;z+=2) for(int y=0;y<=9;y++){
+            BlockPos p=TOKYO_ANCHOR.offset(x,y,z);
+            if(!level.getBlockState(p).isAir()||!level.getBlockState(p.above()).isAir()||level.getBlockState(p.below()).isAir())continue;
+            int east=wallDistance(level,p,1,0), west=wallDistance(level,p,-1,0), south=wallDistance(level,p,0,1), north=wallDistance(level,p,0,-1);
+            if(east<0||west<0||south<0||north<0)continue;
+            int width=east+west, depth=north+south;
+            if(width<4||depth<4||width>13||depth>13)continue;
+            int ceiling=ceilingDistance(level,p);
+            if(ceiling<3||ceiling>6)continue;
+            double rd=Math.sqrt(p.distSqr(rail));
+            int score=100-(int)Math.abs(width-8)*3-(int)Math.abs(depth-7)*3-(int)Math.abs(rd-18);
+            if(score>bestScore){bestScore=score;best=p;}
+        }
+        return best!=null?best:TOKYO_ANCHOR.offset(10,1,8);
+    }
+
+    private static int wallDistance(ServerLevel l,BlockPos p,int dx,int dz){
+        for(int i=2;i<=7;i++) if(!l.getBlockState(p.offset(dx*i,1,dz*i)).isAir()) return i;
+        return -1;
+    }
+    private static int ceilingDistance(ServerLevel l,BlockPos p){
+        for(int i=2;i<=7;i++) if(!l.getBlockState(p.above(i)).isAir())return i;
+        return -1;
+    }
+
+    private static void buildMonitorBank(ServerLevel level, BlockPos c) {
+        // Compact four-monitor console placed inside an existing room; no fake off-map room.
+        for(int x=-4;x<=4;x++) set(level,c.offset(x,0,2),Blocks.DARK_OAK_SLAB.defaultBlockState());
+        for(int x=-4;x<=4;x++) for(int y=1;y<=3;y++) set(level,c.offset(x,y,3),Blocks.BLACK_CONCRETE.defaultBlockState());
+        for(int m=0;m<4;m++){
+            int x=-3+m*2;
+            set(level,c.offset(x,2,2),Blocks.TINTED_GLASS.defaultBlockState());
+            set(level,c.offset(x,3,2),Blocks.GRAY_STAINED_GLASS.defaultBlockState());
+            set(level,c.offset(x,1,2),Blocks.POLISHED_BLACKSTONE.defaultBlockState());
+        }
+        set(level,c.offset(-4,4,3),Blocks.REDSTONE_LAMP.defaultBlockState());
+        set(level,c.offset(4,4,3),Blocks.REDSTONE_LAMP.defaultBlockState());
+    }
+
+    public static void spawnTrain(ServerLevel level, RailGeometry g, double offset) {
+        removeTrain(level,g.rail());
+        double yaw=g.axisZ()?0.0:90.0;
+        for(int coach=0;coach<3;coach++){
+            double along=offset+coach*8.6;
+            double x=g.rail().getX()+0.5+(g.axisZ()?0:along);
+            double z=g.rail().getZ()+0.5+(g.axisZ()?along:0);
+            double y=g.rail().getY()+1.65;
+            // body shell + roof + dark windows + red route stripe + doors + interior light
+            display(level,x,y,z,Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState(),3.65f,2.85f,8.0f,yaw,TRAIN_TAG);
+            display(level,x,y+1.48,z,Blocks.SMOOTH_STONE.defaultBlockState(),3.82f,0.18f,8.12f,yaw,TRAIN_TAG);
+            display(level,x,y+0.45,z,Blocks.BLACK_STAINED_GLASS.defaultBlockState(),3.76f,1.12f,6.2f,yaw,TRAIN_TAG);
+            display(level,x,y-0.55,z,Blocks.RED_CONCRETE.defaultBlockState(),3.78f,0.22f,7.9f,yaw,TRAIN_TAG);
+            display(level,x,y+1.05,z,Blocks.SEA_LANTERN.defaultBlockState(),2.7f,0.06f,6.4f,yaw,TRAIN_TAG);
+            display(level,x,y,z-0.0,Blocks.IRON_BLOCK.defaultBlockState(),3.86f,2.42f,1.35f,yaw,TRAIN_TAG,DOOR_TAG);
+        }
+        // front plate and headlamps near first coach
+        double fx=g.rail().getX()+0.5+(g.axisZ()?0:offset-4.15);
+        double fz=g.rail().getZ()+0.5+(g.axisZ()?offset-4.15:0);
+        double fy=g.rail().getY()+1.65;
+        display(level,fx,fy,fz,Blocks.DEEPSLATE_TILES.defaultBlockState(),3.66f,2.86f,0.24f,yaw,TRAIN_TAG);
+        display(level,fx,fy-0.35,fz,Blocks.SEA_LANTERN.defaultBlockState(),2.25f,0.4f,0.28f,yaw,TRAIN_TAG);
+    }
+
+    public static void setTrainOffset(ServerLevel level, RailGeometry g, double oldOffset, double newOffset) {
+        double delta=newOffset-oldOffset;
+        AABB box=new AABB(g.rail()).inflate(110);
+        for(Display.BlockDisplay d:level.getEntitiesOfClass(Display.BlockDisplay.class,box,e->e.getTags().contains(TRAIN_TAG))){
+            if(g.axisZ())d.teleportTo(d.getX(),d.getY(),d.getZ()+delta); else d.teleportTo(d.getX()+delta,d.getY(),d.getZ());
         }
     }
 
-    public static void buildTrain(ServerLevel level, BlockPos origin) {
-        removeTrain(level, origin);
-        double baseX = origin.getX() + 5.2;
-        double baseY = origin.getY() + 0.15;
-        double baseZ = origin.getZ() + 7.0;
-
-        for (int coach = 0; coach < 3; coach++) {
-            double cz = baseZ + coach * 8.2;
-            display(level, baseX, baseY + 1.55, cz, Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState(), 3.6f, 2.9f, 7.7f, TRAIN_TAG);
-            display(level, baseX, baseY + 3.10, cz, Blocks.SMOOTH_STONE.defaultBlockState(), 3.75f, 0.22f, 7.85f, TRAIN_TAG);
-            display(level, baseX, baseY + 0.05, cz, Blocks.DEEPSLATE_TILES.defaultBlockState(), 3.55f, 0.18f, 7.65f, TRAIN_TAG);
-            display(level, baseX - 1.88, baseY + 1.85, cz, Blocks.BLACK_STAINED_GLASS.defaultBlockState(), 0.12f, 1.15f, 5.3f, TRAIN_TAG);
-            display(level, baseX + 1.88, baseY + 1.85, cz, Blocks.BLACK_STAINED_GLASS.defaultBlockState(), 0.12f, 1.15f, 5.3f, TRAIN_TAG);
-            display(level, baseX - 1.96, baseY + 1.05, cz, Blocks.RED_CONCRETE.defaultBlockState(), 0.10f, 0.34f, 7.25f, TRAIN_TAG);
-            display(level, baseX + 1.96, baseY + 1.05, cz, Blocks.RED_CONCRETE.defaultBlockState(), 0.10f, 0.34f, 7.25f, TRAIN_TAG);
-            display(level, baseX - 2.02, baseY + 1.45, cz - 1.3, Blocks.IRON_BLOCK.defaultBlockState(), 0.12f, 2.35f, 1.45f, TRAIN_TAG, DOOR_TAG);
-            display(level, baseX - 2.02, baseY + 1.45, cz + 1.3, Blocks.IRON_BLOCK.defaultBlockState(), 0.12f, 2.35f, 1.45f, TRAIN_TAG, DOOR_TAG);
-            display(level, baseX, baseY + 2.55, cz, Blocks.SEA_LANTERN.defaultBlockState(), 2.4f, 0.08f, 5.5f, TRAIN_TAG);
-        }
-
-        double frontZ = baseZ - 4.15;
-        display(level, baseX, baseY + 1.55, frontZ, Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState(), 3.6f, 2.9f, 0.30f, TRAIN_TAG);
-        display(level, baseX - 0.95, baseY + 1.15, frontZ - 0.18, Blocks.SEA_LANTERN.defaultBlockState(), 0.45f, 0.45f, 0.12f, TRAIN_TAG);
-        display(level, baseX + 0.95, baseY + 1.15, frontZ - 0.18, Blocks.SEA_LANTERN.defaultBlockState(), 0.45f, 0.45f, 0.12f, TRAIN_TAG);
-        display(level, baseX, baseY + 2.35, frontZ - 0.18, Blocks.RED_CONCRETE.defaultBlockState(), 1.2f, 0.32f, 0.12f, TRAIN_TAG);
+    public static void openTrainDoors(ServerLevel level, RailGeometry g) {
+        AABB box=new AABB(g.rail()).inflate(100);
+        for(Display.BlockDisplay d:level.getEntitiesOfClass(Display.BlockDisplay.class,box,e->e.getTags().contains(DOOR_TAG)))d.discard();
     }
 
-    public static void openTrainDoors(ServerLevel level, BlockPos origin) {
-        AABB box = new AABB(origin).inflate(80.0);
-        List<Display.BlockDisplay> entities = level.getEntitiesOfClass(Display.BlockDisplay.class, box, e -> e.getTags().contains(DOOR_TAG));
-        for (Entity e : entities) e.discard();
+    public static void removeTrain(ServerLevel level, BlockPos around) {
+        AABB box=new AABB(around).inflate(120);
+        for(Display.BlockDisplay d:level.getEntitiesOfClass(Display.BlockDisplay.class,box,e->e.getTags().contains(TRAIN_TAG)))d.discard();
     }
 
-    public static void removeTrain(ServerLevel level, BlockPos origin) {
-        AABB box = new AABB(origin).inflate(100.0);
-        List<Display.BlockDisplay> entities = level.getEntitiesOfClass(Display.BlockDisplay.class, box, e -> e.getTags().contains(TRAIN_TAG));
-        for (Entity e : entities) e.discard();
+    private static void display(ServerLevel level,double x,double y,double z,BlockState state,float sx,float sy,float sz,double yawDeg,String...tags){
+        Display.BlockDisplay d=EntityType.BLOCK_DISPLAY.create(level); if(d==null)return;
+        double rad=Math.toRadians(yawDeg); float qy=(float)Math.sin(rad/2.0), qw=(float)Math.cos(rad/2.0);
+        CompoundTag nbt=new CompoundTag(); nbt.put("block_state",NbtUtils.writeBlockState(state));
+        CompoundTag tr=new CompoundTag(); tr.put("translation",floats(-sx/2,-sy/2,-sz/2)); tr.put("scale",floats(sx,sy,sz));
+        tr.put("left_rotation",floats(0,qy,0,qw)); tr.put("right_rotation",floats(0,0,0,1)); nbt.put("transformation",tr);
+        nbt.putFloat("view_range",2.5f); nbt.putFloat("shadow_radius",0f); d.load(nbt); d.setPos(x,y,z);
+        for(String t:tags)d.addTag(t); level.addFreshEntity(d);
     }
-
-    private static void display(ServerLevel level, double x, double y, double z, BlockState state,
-                                float sx, float sy, float sz, String... tags) {
-        Display.BlockDisplay d = EntityType.BLOCK_DISPLAY.create(level);
-        if (d == null) return;
-        CompoundTag nbt = new CompoundTag();
-        nbt.put("block_state", NbtUtils.writeBlockState(state));
-        CompoundTag transform = new CompoundTag();
-        transform.put("translation", floats(-sx / 2.0f, -sy / 2.0f, -sz / 2.0f));
-        transform.put("scale", floats(sx, sy, sz));
-        transform.put("left_rotation", floats(0f, 0f, 0f, 1f));
-        transform.put("right_rotation", floats(0f, 0f, 0f, 1f));
-        nbt.put("transformation", transform);
-        nbt.putFloat("view_range", 1.5f);
-        nbt.putFloat("shadow_radius", 0.0f);
-        d.load(nbt);
-        d.setPos(x, y, z);
-        for (String tag : tags) d.addTag(tag);
-        level.addFreshEntity(d);
-    }
-
-    private static ListTag floats(float... values) {
-        ListTag list = new ListTag();
-        for (float v : values) list.add(FloatTag.valueOf(v));
-        return list;
-    }
-
-    private static void set(ServerLevel level, BlockPos p, BlockState state) { level.setBlock(p,state,3); }
-    private static void clear(ServerLevel level, BlockPos a, BlockPos b) { fill(level,a,b,Blocks.AIR.defaultBlockState()); }
-    private static void fill(ServerLevel level, BlockPos a, BlockPos b, BlockState state) {
-        int minX=Math.min(a.getX(),b.getX()), maxX=Math.max(a.getX(),b.getX());
-        int minY=Math.min(a.getY(),b.getY()), maxY=Math.max(a.getY(),b.getY());
-        int minZ=Math.min(a.getZ(),b.getZ()), maxZ=Math.max(a.getZ(),b.getZ());
-        for(int x=minX;x<=maxX;x++) for(int y=minY;y<=maxY;y++) for(int z=minZ;z<=maxZ;z++) {
-            level.setBlock(new BlockPos(x,y,z),state,3);
-        }
-    }
+    private static ListTag floats(float...v){ListTag l=new ListTag();for(float f:v)l.add(FloatTag.valueOf(f));return l;}
+    private static void set(ServerLevel l,BlockPos p,BlockState s){l.setBlock(p,s,3);}
 }
