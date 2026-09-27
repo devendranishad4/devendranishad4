@@ -1,4 +1,4 @@
-name: Build Train31 Cinematic V2
+name: Build Train31 Tokyo Horror V3
 
 on:
   push:
@@ -31,16 +31,20 @@ jobs:
           EDGE1=$?
           edge-tts --voice en-US-AvaNeural --rate=-13% --pitch=-7Hz --text "Attention please. Train thirty one is approaching platform three. Do not board this train." --write-media /tmp/pa_train31.mp3
           EDGE2=$?
+          edge-tts --voice en-US-AvaNeural --rate=-38% --pitch=-18Hz --text "Injaa..." --write-media /tmp/injaa.mp3
+          EDGE3=$?
           set -e
           if [ $EDGE1 -ne 0 ]; then espeak-ng -v en+f3 -s 128 -p 58 -a 175 -w /tmp/pa_normal.wav "Attention please. The last service has ended. Platform three is closed."; ffmpeg -y -loglevel error -i /tmp/pa_normal.wav /tmp/pa_normal.mp3; fi
           if [ $EDGE2 -ne 0 ]; then espeak-ng -v en+f3 -s 118 -p 52 -a 175 -w /tmp/pa_train31.wav "Attention please. Train thirty one is approaching platform three. Do not board this train."; ffmpeg -y -loglevel error -i /tmp/pa_train31.wav /tmp/pa_train31.mp3; fi
+          if [ $EDGE3 -ne 0 ]; then espeak-ng -v en+f3 -s 72 -p 32 -a 150 -w /tmp/injaa.wav "Injaa"; ffmpeg -y -loglevel error -i /tmp/injaa.wav /tmp/injaa.mp3; fi
           ffmpeg -y -loglevel error -i /tmp/pa_normal.mp3 -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_normal.ogg
           ffmpeg -y -loglevel error -i /tmp/pa_train31.mp3 -af "highpass=f=180,lowpass=f=5200,aecho=0.8:0.35:90:0.16" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_train31.ogg
+          ffmpeg -y -loglevel error -i /tmp/injaa.mp3 -af "highpass=f=130,lowpass=f=2800,aecho=0.8:0.22:170:0.34,volume=1.35" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/whisper_injaa.ogg
           python tools/generate_audio.py
       - name: Build
         run: gradle build --stacktrace
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: Train31-Cinematic-V2-Forge-1.20.1
+          name: Train31-Tokyo-Horror-V3-Forge-1.20.1
           path: build/libs/*.jar
