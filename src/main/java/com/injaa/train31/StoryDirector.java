@@ -57,10 +57,10 @@ public final class StoryDirector {
         if(t<0){ if(t%20==0)sync(player,s,-1,false); return; }
 
         // 0:00-1:20 — ordinary late-night station. No horror yet.
-        if(t==200) StationBuilder.lightPulse(player,true);
-        if(t==204) StationBuilder.lightPulse(player,false);
-        if(t==360) StationBuilder.lightPulse(player,true);
-        if(t==364) StationBuilder.lightPulse(player,false);
+        if(t==200) LightingController.pulse(player,true);
+        if(t==204) LightingController.pulse(player,false);
+        if(t==360) LightingController.pulse(player,true);
+        if(t==364) LightingController.pulse(player,false);
         if(t==420) play(level,g.rail(),Train31Mod.FLUORESCENT_BUZZ.get(),1.1f,1.0f);
         if(t==1200) play(level,g.rail(),Train31Mod.PA_NORMAL.get(),4.0f,1.0f);
 
@@ -110,8 +110,8 @@ public final class StoryDirector {
         // 6:30-8:00 — fog peaks, figure vanishes, then the tunnel becomes unnaturally quiet.
         if(t>=7800 && t<9300) s.fog=0.94f;
         if(t==7900){remove(level,s.girl);s.girl=null;}
-        if(t==8200) StationBuilder.lightPulse(player,true);
-        if(t==8240) StationBuilder.lightPulse(player,false);
+        if(t==8200) LightingController.pulse(player,true);
+        if(t==8240) LightingController.pulse(player,false);
         if(t==8600) play(level,tunnelPos(g,48),Train31Mod.TUNNEL_RUMBLE.get(),2.2f,0.68f);
 
         // 8:00-10:00 — Train 31 actually approaches and stops next to the detected platform/rail.
@@ -148,8 +148,7 @@ public final class StoryDirector {
         }
 
         // 14:10-15:00 — silence, return, departure. No exposition text.
-        if(t==16900){ remove(level,s.girl); s.girl=null; s.fog=0f; StationBuilder.lightPulse(player,false); }
-        if(t==17300 && s.trainSpawned) StationBuilder.closeTrainVisual(level,g);
+        if(t==16900){ remove(level,s.girl); s.girl=null; s.fog=0f; LightingController.pulse(player,false); }
         if(t>=17400 && t<18000 && s.trainSpawned){
             double next=s.trainOffset+0.11;
             StationBuilder.setTrainOffset(level,g,s.trainOffset,next);s.trainOffset=next;
@@ -163,7 +162,7 @@ public final class StoryDirector {
     public static void reset(ServerPlayer player){
         State s=STATES.remove(player.getUUID());
         if(s!=null){ remove(player.serverLevel(),s.girl); }
-        StationBuilder.restoreLights(player);
+        LightingController.restore(player);
         StationBuilder.exitCamera(player);
         StationBuilder.removeTrain(player.serverLevel(),StationBuilder.geometry(player).rail());
         Train31Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),new Train31Network.ClientState(0,0f,-1,false,false));
