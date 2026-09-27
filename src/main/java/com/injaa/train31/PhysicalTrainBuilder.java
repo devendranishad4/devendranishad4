@@ -28,8 +28,8 @@ public final class PhysicalTrainBuilder {
         ServerLevel level = player.serverLevel();
         StationBuilder.RailGeometry g = StationBuilder.geometry(player);
         BlockPos center = g.rail();
-        int floorY = center.getY();
         int platformWall = g.platformSide() >= 0 ? HALF_WIDTH : -HALF_WIDTH;
+        int platformSign = platformWall > 0 ? 1 : -1;
 
         LinkedHashMap<BlockPos, BlockState> saved = new LinkedHashMap<>();
         List<BlockPos> doors = new ArrayList<>();
@@ -45,22 +45,17 @@ public final class PhysicalTrainBuilder {
             boolean end = Math.abs(along) == HALF_LENGTH;
             boolean joint = joints.contains(along);
 
-            // Solid floor and roof make the stopped train genuinely walkable/tangible.
             for (int side = -HALF_WIDTH; side <= HALF_WIDTH; side++) {
                 put(level, saved, pos(center, g.axisZ(), side, 0, along), Blocks.SMOOTH_STONE.defaultBlockState());
                 put(level, saved, pos(center, g.axisZ(), side, HEIGHT, along), joint ? Blocks.POLISHED_BLACKSTONE.defaultBlockState() : Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState());
             }
 
-            // Clear the actual walking interior.
             if (!end) {
                 for (int side = -1; side <= 1; side++) {
-                    for (int y = 1; y < HEIGHT; y++) {
-                        put(level, saved, pos(center, g.axisZ(), side, y, along), Blocks.AIR.defaultBlockState());
-                    }
+                    for (int y = 1; y < HEIGHT; y++) put(level, saved, pos(center, g.axisZ(), side, y, along), Blocks.AIR.defaultBlockState());
                 }
             }
 
-            // Exterior walls. Blue stripe at waist height, dark windows above it.
             for (int wall : new int[]{-HALF_WIDTH, HALF_WIDTH}) {
                 for (int y = 1; y < HEIGHT; y++) {
                     BlockState state;
@@ -74,7 +69,6 @@ public final class PhysicalTrainBuilder {
                 }
             }
 
-            // End caps / cab faces.
             if (end) {
                 for (int side = -1; side <= 1; side++) {
                     put(level, saved, pos(center, g.axisZ(), side, 1, along), Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState());
@@ -84,7 +78,6 @@ public final class PhysicalTrainBuilder {
                 }
             }
 
-            // Ceiling light strip inside each carriage.
             if (Math.floorMod(along + HALF_LENGTH, 4) == 2 && !joint && !end) {
                 BlockPos light = pos(center, g.axisZ(), 0, 4, along);
                 put(level, saved, light, Blocks.SEA_LANTERN.defaultBlockState());
@@ -100,21 +93,19 @@ public final class PhysicalTrainBuilder {
                     put(level, saved, d, y == 2 ? Blocks.IRON_BLOCK.defaultBlockState() : Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState());
                     doors.add(d.immutable());
                 }
+                // Two-block boarding threshold toward the platform so entering is easy instead of a long jump.
+                put(level, saved, pos(center, g.axisZ(), platformWall + platformSign, 0, a), Blocks.POLISHED_ANDESITE.defaultBlockState());
+                put(level, saved, pos(center, g.axisZ(), platformWall + platformSign*2, 0, a), Blocks.POLISHED_ANDESITE.defaultBlockState());
             }
         }
 
-        // A few interior grab poles so the train feels like a real commuter carriage.
         for (int a = -28; a <= 28; a += 7) {
             if (joints.contains(a)) continue;
-            for (int y = 1; y <= 3; y++) {
-                put(level, saved, pos(center, g.axisZ(), 0, y, a), Blocks.IRON_BARS.defaultBlockState());
-            }
+            for (int y = 1; y <= 3; y++) put(level, saved, pos(center, g.axisZ(), 0, y, a), Blocks.IRON_BARS.defaultBlockState());
         }
     }
 
-    public static boolean exists(ServerPlayer player) {
-        return SAVED.containsKey(player.getUUID());
-    }
+    public static boolean exists(ServerPlayer player) { return SAVED.containsKey(player.getUUID()); }
 
     public static void setDoorsOpen(ServerPlayer player, boolean open) {
         LinkedHashMap<BlockPos, BlockState> saved = SAVED.get(player.getUUID());
@@ -133,21 +124,12 @@ public final class PhysicalTrainBuilder {
         List<BlockPos> lights = LIGHTS.get(player.getUUID());
         if (lights == null) return;
         ServerLevel level = player.serverLevel();
-        for (BlockPos p : lights) {
-            level.setBlock(p, on ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.GRAY_CONCRETE.defaultBlockState(), 3);
-        }
-    }
-
-    public static BlockPos interiorPos(ServerPlayer player, double alongBlocks) {
-        StationBuilder.RailGeometry g = StationBuilder.geometry(player);
-        int a = (int)Math.round(alongBlocks);
-        return pos(g.rail(), g.axisZ(), 0, 1, a);
+        for (BlockPos p : lights) level.setBlock(p, on ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.GRAY_CONCRETE.defaultBlockState(), 3);
     }
 
     public static void restore(ServerPlayer player) {
         LinkedHashMap<BlockPos, BlockState> saved = SAVED.remove(player.getUUID());
-        DOORS.remove(player.getUUID());
-        LIGHTS.remove(player.getUUID());
+        DOORS.remove(player.getUUID()); LIGHTS.remove(player.getUUID());
         if (saved == null) return;
         ServerLevel level = player.serverLevel();
         List<Map.Entry<BlockPos, BlockState>> entries = new ArrayList<>(saved.entrySet());
