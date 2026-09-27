@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg espeak-ng
-          python -m pip install --quiet pillow edge-tts yt-dlp
+          python -m pip install --quiet pillow edge-tts 'yt-dlp[default,curl-cffi]'
           python tools/generate_assets.py
           mkdir -p src/main/resources/assets/train31/sounds build/preview
 
@@ -52,7 +52,7 @@ jobs:
           fetch_voice() {
             KEY="$1"
             URL="$2"
-            yt-dlp --no-playlist --quiet -x --audio-format mp3 -o "/tmp/${KEY}.%(ext)s" "$URL"
+            yt-dlp --no-playlist --quiet --impersonate chrome --extractor-args "generic:impersonate" -x --audio-format mp3 -o "/tmp/${KEY}.%(ext)s" "$URL"
           }
 
           fetch_voice waiting "https://pixabay.com/sound-effects/horror-female-ghost-voice-ix27ve-been-waiting-for-you-471635/"
