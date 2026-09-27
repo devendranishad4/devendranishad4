@@ -42,9 +42,9 @@ public class Train31Renderer extends EntityRenderer<Train31Entity> {
     @Override
     public void render(Train31Entity entity, float yaw, float partialTick, PoseStack pose, MultiBufferSource buffer, int packedLight) {
         pose.pushPose();
-        pose.translate(0.0D, 0.08D, 0.0D);
+        // The model uses vanilla +Y-down model coordinates. Lift its origin so the wheels sit on the rail.
+        pose.translate(0.0D, 3.75D, 0.0D);
         pose.mulPose(Axis.YP.rotationDegrees(180.0F - yaw));
-        // Minecraft entity-model coordinates use +Y downward.
         pose.scale(-1.0F, -1.0F, 1.0F);
 
         model.setDoorsOpen(entity.doorsOpen());
@@ -63,7 +63,5 @@ public class Train31Renderer extends EntityRenderer<Train31Entity> {
     }
 
     @Override
-    public ResourceLocation getTextureLocation(Train31Entity entity) {
-        return BODY;
-    }
+    public ResourceLocation getTextureLocation(Train31Entity entity) { return BODY; }
 }
