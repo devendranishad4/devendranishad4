@@ -28,6 +28,9 @@ public final class StoryDirector {
     }
 
     public static void start(ServerPlayer player, int delaySeconds) {
+        // Ignore extra start clicks while a take is already armed/running.
+        if (STATES.containsKey(player.getUUID())) return;
+
         long packed = player.getPersistentData().getLong("train31_origin");
         if (packed == 0L) {
             StationBuilder.build(player);
@@ -37,7 +40,7 @@ public final class StoryDirector {
         StationBuilder.removeTrain(player.serverLevel(), o);
         StationBuilder.setRedMode(player.serverLevel(), o, false);
         STATES.put(player.getUUID(), new State(-delaySeconds*20, o));
-        player.sendSystemMessage(Component.literal("§c[Train 31: Tokyo Edition] §fAUTO armed — " + delaySeconds + " second recording delay."));
+        player.sendSystemMessage(Component.literal("§c[Train 31: Tokyo Edition] §fAUTO armed — §e" + delaySeconds + "s§f recording delay."));
     }
 
     public static void tick(ServerPlayer player) {
@@ -51,7 +54,6 @@ public final class StoryDirector {
         if(t==1000){ sound(level,s.origin,SoundEvents.NOTE_BLOCK_BELL.value(),0.6f); say(player,"§eA fluorescent light flickers somewhere down the platform..."); }
         if(t==2000){ sound(level,s.origin,SoundEvents.NOTE_BLOCK_BELL.value(),0.4f); say(player,"§fAnnouncement: §7Last service has ended. Please leave the station."); }
 
-        // Far end of the real Tokyo subway platform.
         if(t==3200){ spawnShadow(level,s,"shadow",s.origin.offset(0,0,38)); say(player,"§8Something is standing at the far end of Platform 3."); }
         if(t==4300){ sound(level,s.origin.offset(4,-1,12),SoundEvents.IRON_DOOR_CLOSE,0.55f); say(player,"§7...knock... knock... from below the platform."); }
         if(t==5400){ say(player,"§bCCTV CAM 03: §fMotion detected on Platform 3."); moveShadow(level,s.shadow,s.origin.offset(0,0,25)); }
@@ -99,7 +101,7 @@ public final class StoryDirector {
         if(s!=null){ removeEntity(player.serverLevel(),s.shadow); removeEntity(player.serverLevel(),s.passenger); }
         StationBuilder.removeTrain(player.serverLevel(),o);
         StationBuilder.setRedMode(player.serverLevel(),o,false);
-        player.sendSystemMessage(Component.literal("§a[Train 31] Tokyo story reset. Original map blocks were not replaced."));
+        player.sendSystemMessage(Component.literal("§a[Train 31] Tokyo story reset. Ready for another take."));
     }
 
     public static void skip(ServerPlayer player){
