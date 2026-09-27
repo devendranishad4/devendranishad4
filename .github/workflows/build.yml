@@ -26,20 +26,41 @@ jobs:
           python -m pip install --quiet pillow edge-tts
           python tools/generate_assets.py
           mkdir -p src/main/resources/assets/train31/sounds
-          set +e
-          edge-tts --voice ja-JP-NanamiNeural --rate=-10% --pitch=-1Hz --text "Attention please. The last service has ended. Platform three is closed." --write-media /tmp/pa_normal.mp3
-          EDGE1=$?
-          edge-tts --voice ja-JP-NanamiNeural --rate=-16% --pitch=-6Hz --text "Attention please. Train thirty one is approaching platform three. Do not board this train." --write-media /tmp/pa_train31.mp3
-          EDGE2=$?
-          edge-tts --voice ja-JP-NanamiNeural --rate=-46% --pitch=-13Hz --text "Injaa... I will kill you..." --write-media /tmp/injaa.mp3
-          EDGE3=$?
-          set -e
-          if [ $EDGE1 -ne 0 ]; then espeak-ng -v en+f3 -s 128 -p 58 -a 175 -w /tmp/pa_normal.wav "Attention please. The last service has ended. Platform three is closed."; ffmpeg -y -loglevel error -i /tmp/pa_normal.wav /tmp/pa_normal.mp3; fi
-          if [ $EDGE2 -ne 0 ]; then espeak-ng -v en+f3 -s 118 -p 52 -a 175 -w /tmp/pa_train31.wav "Attention please. Train thirty one is approaching platform three. Do not board this train."; ffmpeg -y -loglevel error -i /tmp/pa_train31.wav /tmp/pa_train31.mp3; fi
-          if [ $EDGE3 -ne 0 ]; then espeak-ng -v en+f3 -s 70 -p 34 -a 150 -w /tmp/injaa.wav "Injaa. I will kill you."; ffmpeg -y -loglevel error -i /tmp/injaa.wav /tmp/injaa.mp3; fi
-          ffmpeg -y -loglevel error -i /tmp/pa_normal.mp3 -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_normal.ogg
-          ffmpeg -y -loglevel error -i /tmp/pa_train31.mp3 -af "highpass=f=180,lowpass=f=5200,aecho=0.8:0.35:90:0.16" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_train31.ogg
-          ffmpeg -y -loglevel error -i /tmp/injaa.mp3 -af "highpass=f=120,lowpass=f=2500,aecho=0.8:0.28:190:0.38,volume=1.45" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/whisper_injaa.ogg
+
+          make_voice() {
+            NAME="$1"
+            TEXT="$2"
+            RATE="$3"
+            PITCH="$4"
+            set +e
+            edge-tts --voice ja-JP-NanamiNeural --rate="$RATE" --pitch="$PITCH" --text "$TEXT" --write-media "/tmp/${NAME}.mp3"
+            CODE=$?
+            set -e
+            if [ $CODE -ne 0 ]; then
+              espeak-ng -v en+f3 -s 76 -p 38 -a 150 -w "/tmp/${NAME}.wav" "$TEXT"
+              ffmpeg -y -loglevel error -i "/tmp/${NAME}.wav" "/tmp/${NAME}.mp3"
+            fi
+          }
+
+          make_voice pa_normal "Attention please. The last service has ended. Platform three is closed." -10% -1Hz
+          make_voice pa_train31 "Attention please. Train thirty one is approaching platform three. Do not board this train." -16% -6Hz
+
+          make_voice whisper_injaa "Injaa..." -48% -11Hz
+          make_voice whisper_behind "Don't turn around..." -46% -12Hz
+          make_voice whisper_here "You should not be here..." -44% -12Hz
+          make_voice whisper_die_here "You will die here..." -49% -14Hz
+          make_voice whisper_see_you "I can see you..." -47% -13Hz
+          make_voice whisper_found_you "I found you..." -45% -12Hz
+          make_voice whisper_cant_leave "You can't leave..." -50% -14Hz
+          make_voice whisper_final "Injaa... I will kill you..." -52% -16Hz
+
+          ffmpeg -y -loglevel error -i /tmp/pa_normal.mp3 -af "highpass=f=170,lowpass=f=6100,aecho=0.8:0.28:110:0.12" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_normal.ogg
+          ffmpeg -y -loglevel error -i /tmp/pa_train31.mp3 -af "highpass=f=170,lowpass=f=5000,aecho=0.8:0.34:120:0.20" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_train31.ogg
+
+          for NAME in whisper_injaa whisper_behind whisper_here whisper_die_here whisper_see_you whisper_found_you whisper_cant_leave whisper_final; do
+            ffmpeg -y -loglevel error -i "/tmp/${NAME}.mp3" -af "highpass=f=115,lowpass=f=2400,aecho=0.8:0.30:185:0.40,volume=1.48" -c:a libvorbis -q:a 6 "src/main/resources/assets/train31/sounds/${NAME}.ogg"
+          done
+
           python tools/generate_audio.py
       - name: Build
         run: gradle build --stacktrace
