@@ -4,7 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.RedStoneLampBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
@@ -27,16 +26,17 @@ public final class LightingController {
         BlockPos r=g.rail();
         List<Saved> list=new ArrayList<>();
         int along=34, side=10;
+        outer:
         for(int a=-along;a<=along;a++) for(int s=-side;s<=side;s++) for(int y=1;y<=7;y++) {
             BlockPos p=g.axisZ()?r.offset(s,y,a):r.offset(a,y,s);
             BlockState st=level.getBlockState(p);
             if(st.getLightEmission(level,p)<9) continue;
             list.add(new Saved(p.immutable(),st));
-            if(st.getBlock() instanceof RedStoneLampBlock && st.hasProperty(BlockStateProperties.LIT))
+            if(st.hasProperty(BlockStateProperties.LIT))
                 level.setBlock(p,st.setValue(BlockStateProperties.LIT,false),2);
             else
                 level.setBlock(p,Blocks.GRAY_STAINED_GLASS.defaultBlockState(),2);
-            if(list.size()>=72) break;
+            if(list.size()>=72) break outer;
         }
         SAVED.put(player.getUUID(),list);
     }
