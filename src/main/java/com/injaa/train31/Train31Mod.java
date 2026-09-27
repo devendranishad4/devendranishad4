@@ -104,6 +104,7 @@ public class Train31Mod {
                         .then(Commands.literal("platform").executes(c->{SceneSetup.markPlatform(c.getSource().getPlayerOrException());return 1;}))
                         .then(Commands.literal("rail").executes(c->{SceneSetup.markRail(c.getSource().getPlayerOrException());return 1;}))
                         .then(Commands.literal("tunnel").executes(c->{SceneSetup.markTunnel(c.getSource().getPlayerOrException());return 1;}))
+                        .then(Commands.literal("maptrain").executes(c->{SceneSetup.markMapTrain(c.getSource().getPlayerOrException());return 1;}))
                         .then(Commands.literal("cam1").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),1);return 1;}))
                         .then(Commands.literal("cam2").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),2);return 1;}))
                         .then(Commands.literal("cam3").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),3);return 1;}))
