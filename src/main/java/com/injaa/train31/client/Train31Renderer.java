@@ -25,9 +25,9 @@ public class Train31Renderer extends EntityRenderer<Train31Entity> {
     @Override
     public void render(Train31Entity entity,float yaw,float partialTick,PoseStack pose,MultiBufferSource buffer,int packedLight){
         pose.pushPose();
-        pose.translate(0.0D,3.75D,0.0D);
+        pose.translate(0.0D,4.05D,0.0D);
         pose.mulPose(Axis.YP.rotationDegrees(180.0F-yaw));
-        pose.scale(-1.0F,-1.0F,1.0F);
+        pose.scale(-1.12F,-1.06F,1.12F);
         model.setDoorsOpen(entity.doorsOpen());
         int o=OverlayTexture.NO_OVERLAY;
         model.renderBody(pose,vc(buffer,BODY),packedLight,o);
