@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -19,14 +19,18 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.8'
-      - name: Generate cinematic assets
+
+      - name: Generate cinematic assets and human horror voices
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y ffmpeg espeak-ng
-          python -m pip install --quiet pillow edge-tts 'yt-dlp[default,curl-cffi]'
+          python -m pip install --quiet pillow edge-tts 'gdown>=6.1.0'
           python tools/generate_assets.py
           mkdir -p src/main/resources/assets/train31/sounds build/preview
 
+          # Station PA remains synthetic because it is an artificial public-address system,
+          # not the ghost girl. The ghost-girl voice is handled separately below using
+          # real human recordings from Alesia-Davina's public royalty-free horror bundle.
           make_pa() {
             NAME="$1"
             TEXT="$2"
@@ -46,74 +50,27 @@ jobs:
           ffmpeg -y -loglevel error -i /tmp/pa_normal.mp3 -af "highpass=f=170,lowpass=f=6100,aecho=0.8:0.24:100:0.10" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_normal.ogg
           ffmpeg -y -loglevel error -i /tmp/pa_train31.mp3 -af "highpass=f=170,lowpass=f=5200,aecho=0.8:0.28:115:0.14" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_train31.ogg
 
-          # Real human female horror voice clips from one creator (AlesiaDavina),
-          # each listed by Pixabay as free for use under the Pixabay Content License.
-          # No voice cloning and no pitch-down: keep the actual human performance natural.
-          fetch_voice() {
-            KEY="$1"
-            URL="$2"
-            yt-dlp --no-playlist --quiet --impersonate chrome --extractor-args "generic:impersonate" -x --audio-format mp3 -o "/tmp/${KEY}.%(ext)s" "$URL"
-          }
+          # Real human horror performances only for the girl. This script reads the
+          # creator's public Google Drive bundle, selects matching recorded phrases,
+          # and intentionally leaves a missing line silent rather than falling back to TTS.
+          python tools/fetch_human_voices.py
 
-          fetch_voice waiting "https://pixabay.com/sound-effects/horror-female-ghost-voice-ix27ve-been-waiting-for-you-471635/"
-          fetch_voice know_here "https://pixabay.com/sound-effects/horror-female-ghost-voice-i-know-you-are-here-468557/"
-          fetch_voice follow_me "https://pixabay.com/sound-effects/horror-female-ghost-voice-follow-me-471642/"
-          fetch_voice come_to_me "https://pixabay.com/sound-effects/people-female-ghostly-horror-voice-come-to-me-468554/"
-          fetch_voice beware "https://pixabay.com/sound-effects/horror-female-ghost-voice-beware-471629/"
-          fetch_voice run "https://pixabay.com/sound-effects/horror-creepy-halloween-horror-voice-run-vol-006-165226/"
-          fetch_voice hello "https://pixabay.com/sound-effects/horror-halloween-horror-voice-hello-vol-006-165220/"
-
-          human_voice() {
-            OUT="$1"
-            SRC="$2"
-            ffmpeg -y -loglevel error -i "/tmp/${SRC}.mp3" -af \
-              "highpass=f=115,lowpass=f=5600,acompressor=threshold=-22dB:ratio=1.8:attack=12:release=190,aecho=0.78:0.17:145:0.10,volume=1.08" \
-              -c:a libvorbis -q:a 6 "src/main/resources/assets/train31/sounds/${OUT}.ogg"
-          }
-
-          # Same real woman throughout the episode. The story events keep their existing IDs,
-          # but the spoken content is now real human horror dialogue rather than generated TTS.
-          human_voice whisper_injaa waiting
-          human_voice whisper_can_see know_here
-          human_voice whisper_behind beware
-          human_voice whisper_here know_here
-          human_voice whisper_why_here come_to_me
-          human_voice whisper_coming follow_me
-          human_voice whisper_dont_board beware
-          human_voice whisper_see_you know_here
-          human_voice whisper_cant_leave waiting
-          human_voice whisper_run run
-          human_voice whisper_found_you waiting
-          human_voice whisper_should_listen beware
-
-          # Preview exactly what the human voice pack will sound like in Minecraft.
-          ffmpeg -y -loglevel error \
-            -i /tmp/waiting.mp3 -i /tmp/know_here.mp3 -i /tmp/follow_me.mp3 -i /tmp/come_to_me.mp3 -i /tmp/beware.mp3 -i /tmp/run.mp3 \
-            -filter_complex \
-            "[0:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a0];\
-             [1:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a1];\
-             [2:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a2];\
-             [3:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a3];\
-             [4:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a4];\
-             [5:a]highpass=f=115,lowpass=f=5600,aecho=0.78:0.17:145:0.10[a5];\
-             anullsrc=r=44100:cl=stereo:d=0.65[s0];\
-             anullsrc=r=44100:cl=stereo:d=0.65[s1];\
-             anullsrc=r=44100:cl=stereo:d=0.65[s2];\
-             anullsrc=r=44100:cl=stereo:d=0.65[s3];\
-             anullsrc=r=44100:cl=stereo:d=0.65[s4];\
-             [a0][s0][a1][s1][a2][s2][a3][s3][a4][s4][a5]concat=n=11:v=0:a=1[out]" \
-            -map "[out]" -c:a libmp3lame -q:a 2 build/preview/Train31_Real_Human_Voice_Preview.mp3
-
+          # Original non-dialogue Train 31 ambience/SFX.
           python tools/generate_audio.py
+
       - name: Build
         run: gradle build --stacktrace
+
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
           name: Train31-Tokyo-Horror-V3-Forge-1.20.1
           path: build/libs/*.jar
-      - name: Upload voice preview
+
+      - name: Upload human voice preview
         uses: actions/upload-artifact@v4
         with:
           name: Train31-Real-Human-Voice-Preview
-          path: build/preview/Train31_Real_Human_Voice_Preview.mp3
+          path: |
+            build/preview/Train31_Real_Human_Voice_Preview.mp3
+            build/preview/Train31_Human_Voice_Selection.txt
