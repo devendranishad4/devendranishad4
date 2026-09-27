@@ -34,10 +34,9 @@ public class Train31Mod {
     public void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         boolean hasDirector = player.getInventory().items.stream().anyMatch(s -> s.is(DIRECTOR.get()));
-        if (!hasDirector) {
-            player.getInventory().add(new ItemStack(DIRECTOR.get()));
-            player.sendSystemMessage(Component.literal("§c[Train 31] §fDirector item added. Right-click = build map, crouch + right-click = start AUTO (20s delay)."));
-        }
+        if (!hasDirector) player.getInventory().add(new ItemStack(DIRECTOR.get()));
+
+        player.sendSystemMessage(Component.literal("§c[Train 31: Tokyo Edition] §fDirector ready. Right-click = link/teleport to Tokyo subway. Crouch + right-click = start AUTO once (20s delay)."));
     }
 
     @SubscribeEvent
