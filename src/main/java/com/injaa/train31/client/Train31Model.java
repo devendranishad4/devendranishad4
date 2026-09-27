@@ -9,7 +9,7 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 
-/** Five-car Japanese commuter-style train with a visible walk-through carriage interior. */
+/** Six-car Japanese commuter-style train with a visible walk-through carriage interior. */
 public final class Train31Model {
     private final ModelPart body,roof,windows,stripe,doorway,doors,dark,lights,interior,poles;
 
@@ -25,52 +25,52 @@ public final class Train31Model {
         CubeListBuilder doorway=CubeListBuilder.create(), doors=CubeListBuilder.create(), dark=CubeListBuilder.create(), lights=CubeListBuilder.create();
         CubeListBuilder interior=CubeListBuilder.create(), poles=CubeListBuilder.create();
 
-        // Five cars, each about 8.75 blocks long. Total train is roughly 47 blocks.
-        int[] centers={-304,-152,0,152,304};
+        // Six cars. With renderer scaling the moving train is roughly 60+ blocks long.
+        int[] centers={-380,-228,-76,76,228,380};
         for(int c:centers){
-            body.texOffs(0,0).addBox(-26F,8F,c-70F,52F,44F,140F);
-            roof.texOffs(0,0).addBox(-25F,3F,c-71F,50F,6F,142F);
-            dark.texOffs(0,0).addBox(-22F,52F,c-63F,44F,8F,126F);
+            body.texOffs(0,0).addBox(-27F,8F,c-70F,54F,45F,140F);
+            roof.texOffs(0,0).addBox(-26F,3F,c-71F,52F,6F,142F);
+            dark.texOffs(0,0).addBox(-23F,53F,c-63F,46F,8F,126F);
 
-            stripe.texOffs(0,0).addBox(-26.6F,34F,c-66F,1F,5F,132F);
-            stripe.texOffs(0,0).addBox(25.6F,34F,c-66F,1F,5F,132F);
+            stripe.texOffs(0,0).addBox(-27.6F,34F,c-66F,1F,5F,132F);
+            stripe.texOffs(0,0).addBox(26.6F,34F,c-66F,1F,5F,132F);
 
             int[] wz={-50,-17,17,50};
             for(int w:wz){
-                windows.texOffs(0,0).addBox(-26.7F,14F,c+w-10F,1F,17F,20F);
-                windows.texOffs(0,0).addBox(25.7F,14F,c+w-10F,1F,17F,20F);
+                windows.texOffs(0,0).addBox(-27.7F,14F,c+w-10F,1F,17F,20F);
+                windows.texOffs(0,0).addBox(26.7F,14F,c+w-10F,1F,17F,20F);
             }
 
             int[] dz={-34,34};
             for(int d:dz){
-                doorway.texOffs(0,0).addBox(-26.8F,19F,c+d-10F,1F,31F,20F);
-                doorway.texOffs(0,0).addBox(25.8F,19F,c+d-10F,1F,31F,20F);
-                doors.texOffs(0,0).addBox(-27.0F,19F,c+d-9F,1F,30F,18F);
-                doors.texOffs(0,0).addBox(26.0F,19F,c+d-9F,1F,30F,18F);
-                windows.texOffs(0,0).addBox(-27.1F,23F,c+d-6F,1F,11F,12F);
-                windows.texOffs(0,0).addBox(26.1F,23F,c+d-6F,1F,11F,12F);
+                doorway.texOffs(0,0).addBox(-27.8F,19F,c+d-10F,1F,31F,20F);
+                doorway.texOffs(0,0).addBox(26.8F,19F,c+d-10F,1F,31F,20F);
+                doors.texOffs(0,0).addBox(-28.0F,19F,c+d-9F,1F,30F,18F);
+                doors.texOffs(0,0).addBox(27.0F,19F,c+d-9F,1F,30F,18F);
+                windows.texOffs(0,0).addBox(-28.1F,23F,c+d-6F,1F,11F,12F);
+                windows.texOffs(0,0).addBox(27.1F,23F,c+d-6F,1F,11F,12F);
             }
 
-            interior.texOffs(0,0).addBox(-21F,48F,c-62F,42F,3F,124F);
-            interior.texOffs(0,0).addBox(-22F,39F,c-58F,8F,8F,116F);
-            interior.texOffs(0,0).addBox(14F,39F,c-58F,8F,8F,116F);
+            interior.texOffs(0,0).addBox(-22F,49F,c-62F,44F,3F,124F);
+            interior.texOffs(0,0).addBox(-23F,40F,c-58F,8F,8F,116F);
+            interior.texOffs(0,0).addBox(15F,40F,c-58F,8F,8F,116F);
             lights.texOffs(0,0).addBox(-3F,9F,c-57F,6F,1F,114F);
-            for(int z=-48;z<=48;z+=24) poles.texOffs(0,0).addBox(-1F,13F,c+z,2F,34F,2F);
+            for(int z=-48;z<=48;z+=24) poles.texOffs(0,0).addBox(-1F,13F,c+z,2F,35F,2F);
         }
 
-        // Flexible dark gangways joining all five cars.
-        int[] joints={-228,-76,76,228};
-        for(int j:joints) dark.texOffs(0,0).addBox(-20F,11F,j-5F,40F,38F,10F);
+        // Flexible gangways joining all six cars.
+        int[] joints={-304,-152,0,152,304};
+        for(int j:joints) dark.texOffs(0,0).addBox(-21F,11F,j-5F,42F,39F,10F);
 
         // Cab windows, stripe and headlights at both ends.
-        windows.texOffs(0,0).addBox(-18F,14F,-375.0F,36F,18F,1F);
-        windows.texOffs(0,0).addBox(-18F,14F,374.0F,36F,18F,1F);
-        stripe.texOffs(0,0).addBox(-24F,34F,-375.2F,48F,5F,1F);
-        stripe.texOffs(0,0).addBox(-24F,34F,374.2F,48F,5F,1F);
-        lights.texOffs(0,0).addBox(-20F,39F,-375.6F,7F,5F,1F);
-        lights.texOffs(0,0).addBox(13F,39F,-375.6F,7F,5F,1F);
-        lights.texOffs(0,0).addBox(-20F,39F,374.6F,7F,5F,1F);
-        lights.texOffs(0,0).addBox(13F,39F,374.6F,7F,5F,1F);
+        windows.texOffs(0,0).addBox(-19F,14F,-451.0F,38F,18F,1F);
+        windows.texOffs(0,0).addBox(-19F,14F,450.0F,38F,18F,1F);
+        stripe.texOffs(0,0).addBox(-25F,34F,-451.2F,50F,5F,1F);
+        stripe.texOffs(0,0).addBox(-25F,34F,450.2F,50F,5F,1F);
+        lights.texOffs(0,0).addBox(-21F,39F,-451.6F,7F,5F,1F);
+        lights.texOffs(0,0).addBox(14F,39F,-451.6F,7F,5F,1F);
+        lights.texOffs(0,0).addBox(-21F,39F,450.6F,7F,5F,1F);
+        lights.texOffs(0,0).addBox(14F,39F,450.6F,7F,5F,1F);
 
         root.addOrReplaceChild("body",body,PartPose.ZERO); root.addOrReplaceChild("roof",roof,PartPose.ZERO);
         root.addOrReplaceChild("windows",windows,PartPose.ZERO); root.addOrReplaceChild("stripe",stripe,PartPose.ZERO);
