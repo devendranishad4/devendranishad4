@@ -8,7 +8,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-/** Recording-safe controller: right-click prepares/teleports outside; sneak-right-click starts after 20s. */
+/** Recording controller: right-click prepares in place and starts after 20s; sneak-right-click resets. */
 public class DirectorItem extends Item {
     public DirectorItem(Properties properties){super(properties);}
 
@@ -17,7 +17,14 @@ public class DirectorItem extends Item {
         ItemStack stack=player.getItemInHand(hand);
         if(level.isClientSide)return InteractionResultHolder.success(stack);
         if(!(player instanceof ServerPlayer p))return InteractionResultHolder.pass(stack);
-        if(player.isShiftKeyDown()) StoryDirector.start(p,20); else StationBuilder.prepare(p);
+
+        if(player.isShiftKeyDown()) {
+            StoryDirector.reset(p);
+        } else if(!StoryDirector.isRunning(p)) {
+            StationBuilder.prepare(p); // stays exactly where the player is
+            if(p.getPersistentData().getBoolean("train31_prepared")) StoryDirector.start(p,20);
+        }
+        p.getCooldowns().addCooldown(this,8);
         return InteractionResultHolder.success(stack);
     }
 }
