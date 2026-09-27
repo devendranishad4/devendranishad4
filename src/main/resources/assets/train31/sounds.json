@@ -1,0 +1,10 @@
+{
+  "pa_female": {
+    "sounds": [
+      {
+        "name": "train31:pa_female",
+        "stream": false
+      }
+    ]
+  }
+}
