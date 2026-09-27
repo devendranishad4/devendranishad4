@@ -21,7 +21,7 @@ import net.minecraftforge.network.PacketDistributor;
 
 import java.util.*;
 
-/** Exact-map scene setup. START/CCTV/PLATFORM/RAIL/TUNNEL are all creator-marked. */
+/** Exact-map scene setup. Every important point is creator-marked; no map guessing. */
 public final class StationBuilder {
     private StationBuilder() {}
 
@@ -54,8 +54,8 @@ public final class StationBuilder {
         player.getPersistentData().putBoolean("train31_prepared", true);
 
         buildMonitorBank(level, SceneSetup.cctv(player), SceneSetup.cctvFacing(player));
-        spawnCameras(level, player, rail);
-        teleportOutside(player);
+        spawnCameras(level, player);
+        // Do NOT teleport here. Prepare must never move the player while testing/recording.
     }
 
     public static void ensurePrepared(ServerPlayer player) {
@@ -138,55 +138,28 @@ public final class StationBuilder {
                 new Train31Network.ClientState(Math.max(0, StoryDirector.currentTick(player)), StoryDirector.currentFog(player), -1, false, StoryDirector.isRunning(player)));
     }
 
-    private static void spawnCameras(ServerLevel level, ServerPlayer player, RailGeometry g) {
+    /** Spawn the four CCTV feeds at the exact places the creator marked. */
+    private static void spawnCameras(ServerLevel level, ServerPlayer player) {
         List<UUID> ids = new ArrayList<>();
-        BlockPos r = g.rail();
-        BlockPos tunnel = SceneSetup.tunnel(player);
-        int s = g.platformSide();
-        int a = g.tunnelSign();
-
-        BlockPos cam1, cam2, cam3;
-        if (g.axisZ()) {
-            cam1 = r.offset(s*5,3,-a*14);
-            cam2 = r.offset(s*5,3,a*16);
-            cam3 = r.offset(-s*5,3,a*8);
-        } else {
-            cam1 = r.offset(-a*14,3,s*5);
-            cam2 = r.offset(a*16,3,s*5);
-            cam3 = r.offset(a*8,3,-s*5);
+        for (int i=1;i<=4;i++) {
+            BlockPos p = SceneSetup.cameraPos(player,i);
+            ids.add(spawnCameraExact(level,p,SceneSetup.cameraYaw(player,i),SceneSetup.cameraPitch(player,i)));
         }
-        BlockPos cam4 = tunnel.above(3);
-
-        ids.add(spawnCameraLooking(level, safeCameraPos(level,cam1), r.above(1)));
-        ids.add(spawnCameraLooking(level, safeCameraPos(level,cam2), r.above(1)));
-        ids.add(spawnCameraLooking(level, safeCameraPos(level,cam3), SceneSetup.platform(player).above(1)));
-        ids.add(spawnCameraLooking(level, safeCameraPos(level,cam4), r.above(1)));
         CAMERAS.put(player.getUUID(), ids);
     }
 
-    private static BlockPos safeCameraPos(ServerLevel level, BlockPos preferred) {
-        for (int y=0;y<=3;y++) for (int radius=0;radius<=3;radius++) {
-            for (int x=-radius;x<=radius;x++) for (int z=-radius;z<=radius;z++) {
-                BlockPos p=preferred.offset(x,y,z);
-                if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()) return p;
-            }
-        }
-        return preferred;
-    }
-
-    private static UUID spawnCameraLooking(ServerLevel level, BlockPos p, BlockPos target) {
+    private static UUID spawnCameraExact(ServerLevel level, BlockPos p, float yaw, float pitch) {
         ArmorStand a = EntityType.ARMOR_STAND.create(level);
         if (a == null) return UUID.randomUUID();
+        // Marker is where the player stood. Mount the lens roughly at eye/ceiling-camera height.
+        double x=p.getX()+0.5, y=p.getY()+1.72, z=p.getZ()+0.5;
         a.setInvisible(true); a.setNoGravity(true); a.setInvulnerable(true); a.setSilent(true);
-        a.setPos(p.getX()+0.5, p.getY()+0.2, p.getZ()+0.5);
-        Vec3 from=a.position(), to=Vec3.atCenterOf(target); Vec3 d=to.subtract(from);
-        float yaw=(float)(Mth.atan2(-d.x,d.z)*(180.0/Math.PI));
-        float pitch=(float)(-Mth.atan2(d.y,Math.sqrt(d.x*d.x+d.z*d.z))*(180.0/Math.PI));
-        a.setYRot(yaw); a.setXRot(pitch); a.setYHeadRot(yaw);
+        a.setPos(x,y,z); a.setYRot(yaw); a.setXRot(pitch); a.setYHeadRot(yaw);
         a.addTag(CAMERA_TAG); level.addFreshEntity(a);
 
-        display(level,p.getX()+0.5,p.getY()+0.15,p.getZ()+0.5,Blocks.BLACK_CONCRETE.defaultBlockState(),0.48f,0.34f,0.70f,yaw,CAMERA_PROP_TAG);
-        display(level,p.getX()+0.5,p.getY()+0.15,p.getZ()+0.5,Blocks.OBSERVER.defaultBlockState(),0.20f,0.20f,0.22f,yaw,CAMERA_PROP_TAG);
+        // Small visible CCTV housing at that exact marked spot, never auto-moved outside the subway.
+        display(level,x,y-0.08,z,Blocks.BLACK_CONCRETE.defaultBlockState(),0.48f,0.34f,0.70f,yaw,CAMERA_PROP_TAG);
+        display(level,x,y-0.08,z,Blocks.OBSERVER.defaultBlockState(),0.20f,0.20f,0.22f,yaw,CAMERA_PROP_TAG);
         return a.getUUID();
     }
 
@@ -194,7 +167,7 @@ public final class StationBuilder {
         List<UUID> ids = CAMERAS.remove(player.getUUID());
         if (ids != null) for (UUID id : ids) { Entity e=level.getEntity(id); if(e!=null)e.discard(); }
         BlockPos center=SceneSetup.complete(player)?SceneSetup.platform(player):player.blockPosition();
-        AABB box=new AABB(center).inflate(180);
+        AABB box=new AABB(center).inflate(220);
         for (ArmorStand a:level.getEntitiesOfClass(ArmorStand.class,box,e->e.getTags().contains(CAMERA_TAG))) a.discard();
         for (Display.BlockDisplay d:level.getEntitiesOfClass(Display.BlockDisplay.class,box,e->e.getTags().contains(CAMERA_PROP_TAG))) d.discard();
     }
@@ -204,7 +177,7 @@ public final class StationBuilder {
         return origin.offset(r.getStepX()*right+forward.getStepX()*ahead,up,r.getStepZ()*right+forward.getStepZ()*ahead);
     }
 
-    /** Four-screen showcase wall plus console inside the real marked CCTV room. */
+    /** Four-screen showcase wall plus console inside the exact marked CCTV room. */
     private static void buildMonitorBank(ServerLevel level, BlockPos c, Direction facing) {
         for(int x=-4;x<=4;x++) set(level,local(c,facing,x,0,1),Blocks.POLISHED_BLACKSTONE_SLAB.defaultBlockState());
         for(int x=-4;x<=4;x++) for(int y=1;y<=4;y++) set(level,local(c,facing,x,y,3),Blocks.BLACK_CONCRETE.defaultBlockState());
@@ -219,7 +192,7 @@ public final class StationBuilder {
         set(level,local(c,facing,4,4,3),Blocks.REDSTONE_LAMP.defaultBlockState());
     }
 
-    /** Spawn at the exact marked tunnel, never behind a wall chosen by heuristics. */
+    /** Spawn at the exact marked tunnel, never behind an entrance wall. */
     public static Train31Entity spawnTrain(ServerPlayer player) {
         removeTrain(player);
         ServerLevel level=player.serverLevel();
@@ -272,7 +245,7 @@ public final class StationBuilder {
         UUID id=TRAINS.remove(player.getUUID());
         Entity direct=id==null?null:level.getEntity(id); if(direct!=null)direct.discard();
         BlockPos center=SceneSetup.complete(player)?SceneSetup.rail(player):player.blockPosition();
-        AABB box=new AABB(center).inflate(220);
+        AABB box=new AABB(center).inflate(260);
         for(Train31Entity t:level.getEntitiesOfClass(Train31Entity.class,box,e->e.getTags().contains(TRAIN_TAG)))t.discard();
     }
 
