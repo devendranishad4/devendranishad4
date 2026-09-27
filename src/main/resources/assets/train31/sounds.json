@@ -1,10 +1,10 @@
 {
-  "pa_female": {
-    "sounds": [
-      {
-        "name": "train31:pa_female",
-        "stream": false
-      }
-    ]
-  }
+  "pa_normal": {"sounds":[{"name":"train31:pa_normal","stream":false}]},
+  "pa_train31": {"sounds":[{"name":"train31:pa_train31","stream":false}]},
+  "fluorescent_buzz": {"sounds":[{"name":"train31:fluorescent_buzz","stream":false}]},
+  "cctv_static": {"sounds":[{"name":"train31:cctv_static","stream":false}]},
+  "tunnel_rumble": {"sounds":[{"name":"train31:tunnel_rumble","stream":true}]},
+  "metal_knocks": {"sounds":[{"name":"train31:metal_knocks","stream":false}]},
+  "camera_click": {"sounds":[{"name":"train31:camera_click","stream":false}]},
+  "train_horn": {"sounds":[{"name":"train31:train_horn","stream":false}]}
 }
