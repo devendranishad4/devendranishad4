@@ -1,6 +1,5 @@
 package com.injaa.train31;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -22,7 +21,6 @@ public class DirectorItem extends Item {
 
         if (player.isShiftKeyDown()) {
             StoryDirector.start(serverPlayer, 20);
-            serverPlayer.sendSystemMessage(Component.literal("§c[Train 31] §fAUTO armed. Recording-safe delay: §e20 seconds§f."));
         } else {
             StationBuilder.build(serverPlayer);
         }
