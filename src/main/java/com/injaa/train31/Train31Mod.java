@@ -40,7 +40,7 @@ public class Train31Mod {
 
     public static final RegistryObject<EntityType<Train31Entity>> TRAIN=ENTITIES.register("train31_train",()->
             EntityType.Builder.<Train31Entity>of(Train31Entity::new, MobCategory.MISC)
-                    .sized(3.6f,3.7f).clientTrackingRange(192).updateInterval(1).build("train31_train"));
+                    .sized(3.6f,3.7f).clientTrackingRange(256).updateInterval(1).build("train31_train"));
 
     public static final RegistryObject<SoundEvent> PA_NORMAL=sound("pa_normal");
     public static final RegistryObject<SoundEvent> PA_TRAIN31=sound("pa_train31");
@@ -103,7 +103,11 @@ public class Train31Mod {
                         .then(Commands.literal("cctv").executes(c->{SceneSetup.markCctv(c.getSource().getPlayerOrException());return 1;}))
                         .then(Commands.literal("platform").executes(c->{SceneSetup.markPlatform(c.getSource().getPlayerOrException());return 1;}))
                         .then(Commands.literal("rail").executes(c->{SceneSetup.markRail(c.getSource().getPlayerOrException());return 1;}))
-                        .then(Commands.literal("tunnel").executes(c->{SceneSetup.markTunnel(c.getSource().getPlayerOrException());return 1;})))
+                        .then(Commands.literal("tunnel").executes(c->{SceneSetup.markTunnel(c.getSource().getPlayerOrException());return 1;}))
+                        .then(Commands.literal("cam1").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),1);return 1;}))
+                        .then(Commands.literal("cam2").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),2);return 1;}))
+                        .then(Commands.literal("cam3").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),3);return 1;}))
+                        .then(Commands.literal("cam4").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),4);return 1;})))
                 .then(Commands.literal("setup").executes(c->{SceneSetup.status(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("clearsetup").executes(c->{SceneSetup.clear(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("prepare").executes(c->{StationBuilder.prepare(c.getSource().getPlayerOrException());return 1;}))
