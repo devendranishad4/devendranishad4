@@ -1,8 +1,8 @@
-name: Build Train31 Forge Mod
+name: Build Train31 Cinematic V2
 
 on:
   push:
-    branches: [ "train31-build" ]
+    branches: [ "train31-cinematic-v2" ]
   workflow_dispatch:
 
 jobs:
@@ -19,17 +19,28 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.8'
-      - name: Generate female PA voice asset
+      - name: Generate cinematic assets
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y espeak-ng ffmpeg
+          sudo apt-get install -y ffmpeg espeak-ng
+          python -m pip install --quiet pillow edge-tts
+          python tools/generate_assets.py
           mkdir -p src/main/resources/assets/train31/sounds
-          espeak-ng -v en+f3 -s 132 -p 62 -a 165 -w /tmp/train31_pa.wav "Attention please. The last service has ended. Please leave the station. Platform three remains closed."
-          ffmpeg -y -loglevel error -i /tmp/train31_pa.wav -c:a libvorbis -q:a 5 src/main/resources/assets/train31/sounds/pa_female.ogg
+          set +e
+          edge-tts --voice en-US-AvaNeural --rate=-8% --pitch=-2Hz --text "Attention please. The last service has ended. Platform three is closed." --write-media /tmp/pa_normal.mp3
+          EDGE1=$?
+          edge-tts --voice en-US-AvaNeural --rate=-13% --pitch=-7Hz --text "Attention please. Train thirty one is approaching platform three. Do not board this train." --write-media /tmp/pa_train31.mp3
+          EDGE2=$?
+          set -e
+          if [ $EDGE1 -ne 0 ]; then espeak-ng -v en+f3 -s 128 -p 58 -a 175 -w /tmp/pa_normal.wav "Attention please. The last service has ended. Platform three is closed."; ffmpeg -y -loglevel error -i /tmp/pa_normal.wav /tmp/pa_normal.mp3; fi
+          if [ $EDGE2 -ne 0 ]; then espeak-ng -v en+f3 -s 118 -p 52 -a 175 -w /tmp/pa_train31.wav "Attention please. Train thirty one is approaching platform three. Do not board this train."; ffmpeg -y -loglevel error -i /tmp/pa_train31.wav /tmp/pa_train31.mp3; fi
+          ffmpeg -y -loglevel error -i /tmp/pa_normal.mp3 -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_normal.ogg
+          ffmpeg -y -loglevel error -i /tmp/pa_train31.mp3 -af "highpass=f=180,lowpass=f=5200,aecho=0.8:0.35:90:0.16" -c:a libvorbis -q:a 6 src/main/resources/assets/train31/sounds/pa_train31.ogg
+          python tools/generate_audio.py
       - name: Build
         run: gradle build --stacktrace
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: Train31Director-Forge-1.20.1
+          name: Train31-Cinematic-V2-Forge-1.20.1
           path: build/libs/*.jar
