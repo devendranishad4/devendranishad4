@@ -7,7 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
-/** Stores scene positions and can now create the entire camera setup from one platform anchor. */
+/** Stores scene positions and can create the entire camera setup from one platform anchor. */
 public final class SceneSetup {
     private SceneSetup() {}
 
@@ -18,7 +18,7 @@ public final class SceneSetup {
     private static final String PLATFORM = "train31_manual_platform";
     private static final String RAIL = "train31_manual_rail";
     private static final String TUNNEL = "train31_manual_tunnel";
-    private static final String MAP_TRAIN = "train31_manual_map_train"; // legacy/optional
+    private static final String MAP_TRAIN = "train31_manual_map_train";
     private static final String MAP_TRAIN_YAW = "train31_manual_map_train_yaw";
 
     private static String camPosKey(int i){ return "train31_manual_cam" + i + "_pos"; }
@@ -57,7 +57,6 @@ public final class SceneSetup {
         p.sendSystemMessage(Component.literal("§aTUNNEL APPROACH saved at " + coord(p.blockPosition())));
     }
 
-    /** Legacy option retained for old worlds. The new custom physical train does not require this marker. */
     public static void markMapTrain(ServerPlayer p) {
         p.getPersistentData().putLong(MAP_TRAIN, p.blockPosition().asLong());
         p.getPersistentData().putFloat(MAP_TRAIN_YAW, p.getYRot());
@@ -65,7 +64,6 @@ public final class SceneSetup {
         p.sendSystemMessage(Component.literal("§aLegacy map train marker saved at " + coord(p.blockPosition())));
     }
 
-    /** Stand where the camera should be, look exactly where it should look, then save. */
     public static void markCamera(ServerPlayer p, int index) {
         if(index < 1 || index > 4) return;
         p.getPersistentData().putLong(camPosKey(index), p.blockPosition().asLong());
@@ -76,9 +74,19 @@ public final class SceneSetup {
     }
 
     /**
+     * Preset for the Tokyo-inspired subway map used by this episode.
+     * It puts the player on the tested central platform, facing the tunnel, then runs the normal smart auto setup.
+     */
+    public static void tokyoPreset(ServerPlayer p) {
+        clear(p);
+        p.teleportTo(p.serverLevel(), -74.5, 62.05, 236.5, 90.0f, 0.0f);
+        autoSetup(p);
+        p.sendSystemMessage(Component.literal("§bTokyo subway preset loaded. §fYou are at the recommended Train 31 platform anchor."));
+    }
+
+    /**
      * ONE-COMMAND SETUP.
-     * Stand on the platform at the point where Train 31 should stop and FACE DOWN THE TRACK toward the tunnel.
-     * The code detects which side of the platform drops down toward the track, then creates rail/tunnel/CCTV/cameras itself.
+     * Stand in the middle of the platform and FACE DOWN THE TRACK toward the tunnel.
      */
     public static void autoSetup(ServerPlayer p) {
         ServerLevel level = p.serverLevel();
@@ -94,9 +102,9 @@ public final class SceneSetup {
 
         BlockPos railXZ = platform.relative(trackSide,5);
         BlockPos rail = new BlockPos(railXZ.getX(), trackFloor + 1, railXZ.getZ());
-        BlockPos tunnel = rail.relative(forward,42);
-        BlockPos start = platform.relative(forward.getOpposite(),14);
-        BlockPos cctv = platform.relative(forward.getOpposite(),8).relative(trackSide.getOpposite(),5);
+        BlockPos tunnel = rail.relative(forward,48);
+        BlockPos start = platform.relative(forward.getOpposite(),12);
+        BlockPos cctv = platform.relative(forward.getOpposite(),6).relative(trackSide.getOpposite(),2);
 
         p.getPersistentData().putLong(START,start.asLong());
         p.getPersistentData().putFloat(START_YAW,p.getYRot());
@@ -106,22 +114,26 @@ public final class SceneSetup {
         p.getPersistentData().putLong(RAIL,rail.asLong());
         p.getPersistentData().putLong(TUNNEL,tunnel.asLong());
 
-        // CCTV viewpoints are stored at player-feet height because StationBuilder adds the 1.72 m eye offset.
-        // The old setup used .above(3/.above(4), which pushed the actual camera into/near the station ceiling.
-        BlockPos cam1 = findCameraAir(level, platform.relative(forward.getOpposite(),8).relative(trackSide.getOpposite(),1));
-        BlockPos cam2 = findCameraAir(level, platform.relative(forward,14).relative(trackSide.getOpposite(),1));
-        BlockPos cam3 = findCameraAir(level, platform.relative(forward.getOpposite(),16).relative(trackSide.getOpposite(),1));
-        BlockPos cam4 = findCameraAir(level, platform.relative(forward,5).relative(trackSide.getOpposite(),1));
+        // Cameras now sit toward the track instead of against the rear wall/ceiling.
+        BlockPos cam1Preferred = platform.relative(forward.getOpposite(),18).relative(trackSide,1);
+        BlockPos cam2Preferred = platform.relative(forward,20).relative(trackSide,1);
+        BlockPos oppositeBase = new BlockPos(rail.getX(), platform.getY(), rail.getZ()).relative(trackSide,5).relative(forward.getOpposite(),7);
+        BlockPos cam4Preferred = platform.relative(forward.getOpposite(),4).relative(trackSide,1);
 
-        // Four clean cinematic angles: platform wide, tunnel/rail, long platform, and train-stop close view.
-        saveAutoCamera(p,1,cam1,platform.relative(forward,4).above(1));
-        saveAutoCamera(p,2,cam2,rail.relative(forward.getOpposite(),3).above(1));
-        saveAutoCamera(p,3,cam3,platform.relative(forward,8).above(1));
-        saveAutoCamera(p,4,cam4,rail.above(1));
+        BlockPos cam1 = findCameraAir(level, cam1Preferred);
+        BlockPos cam2 = findCameraAir(level, cam2Preferred);
+        BlockPos cam3 = findCameraAir(level, oppositeBase);
+        BlockPos cam4 = findCameraAir(level, cam4Preferred);
+
+        // 1 wide platform, 2 tunnel approach, 3 opposite-platform master, 4 closer stop-zone diagonal.
+        saveAutoCamera(p,1,cam1,platform.relative(forward,7).above(1));
+        saveAutoCamera(p,2,cam2,tunnel.relative(forward.getOpposite(),5).above(1));
+        saveAutoCamera(p,3,cam3,rail.relative(forward,2).above(1));
+        saveAutoCamera(p,4,cam4,rail.relative(forward,7).above(1));
 
         dirty(p);
         p.sendSystemMessage(Component.literal("§a§lTRAIN 31 AUTO SETUP COMPLETE"));
-        p.sendSystemMessage(Component.literal("§7Platform/rail/tunnel + all 4 CCTV cameras were placed automatically. Track side detected: §f"+trackSide.getName()));
+        p.sendSystemMessage(Component.literal("§7Wide / tunnel / opposite-platform / stop-zone CCTV angles generated automatically."));
         p.sendSystemMessage(Component.literal("§8CAM1 "+coord(cam1)+" | CAM2 "+coord(cam2)+" | CAM3 "+coord(cam3)+" | CAM4 "+coord(cam4)));
     }
 
@@ -137,13 +149,20 @@ public final class SceneSetup {
         p.getPersistentData().putFloat(camPitchKey(index),pitch);
     }
 
+    /** Search nearby air too, so a preferred camera point inside a pillar/wall is moved into a usable open spot. */
     private static BlockPos findCameraAir(ServerLevel level,BlockPos base){
-        BlockPos p=base;
-        for(int i=0;i<5;i++){
-            if(level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()) return p;
-            p=p.above();
+        for(int radius=0; radius<=5; radius++){
+            for(int dx=-radius; dx<=radius; dx++){
+                for(int dz=-radius; dz<=radius; dz++){
+                    if(radius>0 && Math.abs(dx)!=radius && Math.abs(dz)!=radius) continue;
+                    for(int dy=0; dy<=3; dy++){
+                        BlockPos p=base.offset(dx,dy,dz);
+                        if(level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()) return p;
+                    }
+                }
+            }
         }
-        return p;
+        return base.above(2);
     }
 
     private static int surfaceY(ServerLevel level,BlockPos pos,int aroundY){
@@ -212,7 +231,7 @@ public final class SceneSetup {
         String e = p.getPersistentData().contains(TUNNEL) ? "§aSET" : "§cMISSING";
         p.sendSystemMessage(Component.literal("§eTrain 31 setup §7| §fSTART: "+a+" §7| §fCCTV: "+b+" §7| §fPLATFORM: "+c+" §7| §fRAIL: "+d+" §7| §fTUNNEL: "+e));
         p.sendSystemMessage(Component.literal("§fCAM1: "+(hasCamera(p,1)?"§aSET":"§cMISSING")+" §7| §fCAM2: "+(hasCamera(p,2)?"§aSET":"§cMISSING")+" §7| §fCAM3: "+(hasCamera(p,3)?"§aSET":"§cMISSING")+" §7| §fCAM4: "+(hasCamera(p,4)?"§aSET":"§cMISSING")));
-        if(!complete(p)) p.sendSystemMessage(Component.literal("§7Easy setup: stand on platform, face down the track toward the tunnel, then run §f/train31 auto"));
+        if(!complete(p)) p.sendSystemMessage(Component.literal("§7Easy setup: stand on platform, face toward the tunnel, then run §f/train31 auto"));
         else valid(p);
     }
 
