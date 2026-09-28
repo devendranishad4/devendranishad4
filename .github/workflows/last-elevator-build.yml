@@ -1,0 +1,30 @@
+name: Last Elevator Forge build
+on:
+  pull_request:
+    paths:
+      - 'last-elevator/**'
+      - '.github/workflows/last-elevator-build.yml'
+  push:
+    branches:
+      - 'codex/last-elevator-build'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+      - name: Compile Forge mod
+        working-directory: last-elevator/mod
+        run: gradle build --stacktrace
+      - name: Upload compiled mod
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-elevator-forge-1.20.1
+          path: last-elevator/mod/build/libs/*.jar
