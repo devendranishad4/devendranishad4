@@ -169,6 +169,7 @@ public class LastElevator {
         for(String m:MARKERS)marks.then(Commands.literal(m).executes(c->mark(c.getSource().getPlayerOrException(),m)));
         root.then(marks);
         root.then(Commands.literal("check").executes(c->check(c.getSource().getPlayerOrException())));
+        root.then(Commands.literal("build").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();String result=SceneBuilder.build(p);msg(p,result);return result.startsWith("Placed")?1:0;}));
         root.then(Commands.literal("setup").executes(c->setup(c.getSource().getPlayerOrException())));
         root.then(Commands.literal("start").executes(c->start(c.getSource().getPlayerOrException(),20))
                 .then(Commands.argument("seconds",IntegerArgumentType.integer(10,20))
@@ -209,7 +210,7 @@ public class LastElevator {
         mob.moveTo(at.getX()+.5,at.getY(),at.getZ()+.5,0,0);
         ((ServerLevel)p.level()).addFreshEntity(mob);
         state(p).putUUID("passengerId",mob.getUUID());
-        sound(p,SoundEvents.NOTE_BLOCK_BELL,.55f);
+        sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.55f);
     }
     private static int auto(ServerPlayer p,int seconds){
         int result=start(p,seconds);
@@ -223,7 +224,7 @@ public class LastElevator {
         if(delay>0){
             d.putInt("delay",delay-1);
             if(delay%20==0)msg(p,"Starts in "+(delay/20)+"...");
-            if(delay==1){teleport(p,"lobby");msg(p,"ACTION");sound(p,SoundEvents.NOTE_BLOCK_BELL,1f);}
+            if(delay==1){teleport(p,"lobby");msg(p,"ACTION");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),1f);}
             return;
         }
         int transition=d.getInt("transition");
@@ -239,15 +240,15 @@ public class LastElevator {
             if(t==60&&stage==2)giveFuse(p,2);
             if(t==75&&stage==4)giveFuse(p,3);
         }
-        if(t==20&&stage==2){msg(p,"The directory has no floor 13.");sound(p,SoundEvents.NOTE_BLOCK_BELL,.8f);}
-        if(t==40&&stage==3){msg(p,"RULE: After the bell, don't look at the other passenger.");sound(p,SoundEvents.NOTE_BLOCK_BELL,.6f);}
+        if(t==20&&stage==2){msg(p,"The directory has no floor 13.");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.8f);}
+        if(t==40&&stage==3){msg(p,"RULE: After the bell, don't look at the other passenger.");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.6f);}
         if(t==85&&stage==3){sound(p,SoundEvents.WOOD_STEP,.7f);}
         if(t==40&&stage==4){sound(p,SoundEvents.LEVER_CLICK,.6f);msg(p,"The radio repeats your voice...");}
         if(t==140&&stage==4){spawn(p,"passenger_maintenance");msg(p,"Run to the lift!");}
         if(t==50&&stage==6){msg(p,"Same landing. One lamp is gone.");sound(p,SoundEvents.IRON_DOOR_CLOSE,.7f);}
         if(t==180&&stage==6){msg(p,"The landing repeats again. Find floor 0.");}
         if(t==70&&stage==7){spawn(p,"passenger_zero");msg(p,"Break the emergency seal and reach the exit!");}
-        if(t==40&&stage==8){msg(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());sound(p,SoundEvents.NOTE_BLOCK_BELL,.45f);}
+        if(t==40&&stage==8){msg(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.45f);}
         if((stage==4||stage==7)&&t%30==0)((ServerLevel)p.level()).sendParticles(ParticleTypes.SMOKE,p.getX(),p.getY()+.8,p.getZ(),2,.4,.3,.4,0);
         if(d.getBoolean("auto")&&t>=AUTO_SECONDS[stage]*20){
             if(stage<SCENES.length-1)scene(p,stage+1,true);

@@ -14,7 +14,7 @@ Minecraft Java **1.20.1**, Forge **47.4.20**, Java **17**. This package contains
 
 `sets/01_lobby_and_lift.schem`, `02_office_and_fuse_panel.schem`, `03_impossible_hotel_13.schem`, `04_maintenance_chase.schem`, `05_floor_zero_and_exit.schem`, `06_looping_stairwell.schem`.
 
-Do not paste directly over existing city blocks. Paste the sets in empty world space or a copy of the city world; test entry, exits and light levels before assigning markers. Air is included in the schematics, so a normal paste overwrites the selected cuboid. The preview PNGs are **top-down plans**, not game screenshots.
+The source now includes an in-mod `/le build` command that reads the schematics and refuses to overwrite existing blocks. Stand on a fully empty **at least 72 × 52 block** plot with 52 blocks of clear height, in a copy of your world. It stacks the sets vertically, places the stairwell beside them, saves all markers and moves you to the lobby. `/le build` must still be compiled and tested in-game. Avoid a WorldEdit paste over existing city blocks; air in a normal paste would overwrite the selected cuboid. The preview PNGs are **top-down plans**, not game screenshots.
 
 ## Mod build when dependencies are available
 
@@ -22,7 +22,7 @@ Open `mod/` on a Windows computer with Java 17 and internet access to Forge's Ma
 
 ## Director commands planned in source
 
-Stand at each actual location and mark it with `/le mark <name>`. Required names: `lobby`, `car`, `office`, `hotel`, `maintenance`, `stair`, `zero`, `street`, `fuse1`, `fuse2`, `fuse3`, `passenger_maintenance`, `passenger_zero`. Every arrival marker needs a solid floor and two blocks of clear space. The `car` marker is for the elevator's button proximity check.
+`/le build` is intended to set all markers automatically. For hand-placed or modified sets, stand at each actual location and use `/le mark <name>`. Required names: `lobby`, `car`, `office`, `hotel`, `maintenance`, `stair`, `zero`, `street`, `fuse1`, `fuse2`, `fuse3`, `passenger_maintenance`, `passenger_zero`. Every arrival marker needs a solid floor and two blocks of clear space. The `car` marker is for the elevator's button proximity check.
 
 Use `/le check`, `/le setup`, `/le auto 20` for a fully timed recording pass. The mod source schedules nine scenes over approximately 13 minutes after a 20-second countdown and awards the three fuses during that run. The cold open should be recorded as a separate shot and edited to the beginning. **AUTO is source only until a JAR builds and is tested in-game.**
 
