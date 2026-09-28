@@ -72,6 +72,9 @@ public class Train31Mod {
 
     public static final RegistryObject<SoundEvent> GIRL_ROAR=sound("girl_roar");
     public static final RegistryObject<SoundEvent> POWER_DOWN=sound("power_down");
+    public static final RegistryObject<SoundEvent> HORROR_SWELL=sound("horror_swell");
+    public static final RegistryObject<SoundEvent> HORROR_HIT=sound("horror_hit");
+    public static final RegistryObject<SoundEvent> FEMALE_BREATH=sound("female_breath");
 
     private static RegistryObject<SoundEvent> sound(String id){
         return SOUNDS.register(id,()->SoundEvent.createVariableRangeEvent(new ResourceLocation(MODID,id)));
@@ -98,7 +101,9 @@ public class Train31Mod {
 
     @SubscribeEvent
     public void tick(TickEvent.PlayerTickEvent e){
-        if(e.phase==TickEvent.Phase.END && !e.player.level().isClientSide && e.player instanceof ServerPlayer p) StoryDirector.tick(p);
+        if(e.phase!=TickEvent.Phase.END || e.player.level().isClientSide || !(e.player instanceof ServerPlayer p))return;
+        StoryDirector.tick(p);
+        GhostPowerController.tick(p);
     }
 
     @SubscribeEvent
@@ -115,6 +120,7 @@ public class Train31Mod {
                 .then(Commands.literal("tokyo").executes(c->{
                     ServerPlayer p=c.getSource().getPlayerOrException();
                     StoryDirector.reset(p);
+                    GhostPowerController.reset(p);
                     PhysicalTrainBuilder.restore(p);
                     SceneSetup.tokyoPreset(p);
                     StationBuilder.prepare(p);
@@ -139,12 +145,15 @@ public class Train31Mod {
                         .then(Commands.literal("cam3").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),3);return 1;}))
                         .then(Commands.literal("cam4").executes(c->{SceneSetup.markCamera(c.getSource().getPlayerOrException(),4);return 1;})))
                 .then(Commands.literal("setup").executes(c->{SceneSetup.status(c.getSource().getPlayerOrException());return 1;}))
-                .then(Commands.literal("clearsetup").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();PhysicalTrainBuilder.restore(p);SceneSetup.clear(p);return 1;}))
+                .then(Commands.literal("clearsetup").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();GhostPowerController.reset(p);PhysicalTrainBuilder.restore(p);SceneSetup.clear(p);return 1;}))
                 .then(Commands.literal("prepare").executes(c->{StationBuilder.prepare(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("start").then(Commands.argument("delay", IntegerArgumentType.integer(0,60)).executes(c->{StoryDirector.start(c.getSource().getPlayerOrException(),IntegerArgumentType.getInteger(c,"delay"));return 1;})))
-                .then(Commands.literal("reset").executes(c->{StoryDirector.reset(c.getSource().getPlayerOrException());return 1;}))
+                .then(Commands.literal("reset").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();StoryDirector.reset(p);GhostPowerController.reset(p);return 1;}))
                 .then(Commands.literal("skip").executes(c->{StoryDirector.skip(c.getSource().getPlayerOrException());return 1;}))
                 .then(Commands.literal("cam").then(Commands.argument("index",IntegerArgumentType.integer(1,4)).executes(c->{StationBuilder.enterCamera(c.getSource().getPlayerOrException(),IntegerArgumentType.getInteger(c,"index")-1);return 1;})))
+                .then(Commands.literal("power")
+                        .then(Commands.literal("push").executes(c->{GhostPowerController.pushFromBehind(c.getSource().getPlayerOrException(),1.15,false);return 1;}))
+                        .then(Commands.literal("fall").executes(c->{GhostPowerController.pushSideways(c.getSource().getPlayerOrException(),1.35,true,true);return 1;})))
         );
     }
 }
