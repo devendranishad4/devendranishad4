@@ -1,5 +1,11 @@
 name: Last Elevator Forge build
 on:
+  push:
+    branches:
+      - codex/last-elevator-build
+    paths:
+      - 'last-elevator/**'
+      - '.github/workflows/last-elevator-build.yml'
   pull_request:
     paths:
       - 'last-elevator/**'
