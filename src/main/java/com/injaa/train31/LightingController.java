@@ -9,41 +9,74 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import java.util.*;
 
-/** Temporarily disables real station light sources and restores every changed block exactly. */
+/**
+ * Real station-light controller. It snapshots the station lights once, so flickers do not repeatedly scan
+ * the whole map. At 11:48 the saved lights can stay physically OFF until reset/end.
+ */
 public final class LightingController {
     private LightingController() {}
-    private record Saved(BlockPos pos, BlockState state) {}
-    private static final Map<UUID,List<Saved>> SAVED = new HashMap<>();
 
-    public static void pulse(ServerPlayer player, boolean off) {
-        if(off) darken(player); else restore(player);
+    private record Saved(BlockPos pos, BlockState state) {}
+    private static final class SceneLights {
+        final List<Saved> lights;
+        boolean off;
+        SceneLights(List<Saved> lights){this.lights=lights;}
     }
 
-    private static void darken(ServerPlayer player) {
-        if(SAVED.containsKey(player.getUUID()))return;
-        ServerLevel level=player.serverLevel();
-        StationBuilder.RailGeometry g=StationBuilder.geometry(player);
-        BlockPos r=g.rail();
-        List<Saved> list=new ArrayList<>();
+    private static final Map<UUID, SceneLights> SCENES = new HashMap<>();
 
-        // Covers the platform, connected concourse edges and the marked tunnel mouth.
-        int along=58, side=18;
-        outer:
-        for(int a=-along;a<=along;a++) for(int s=-side;s<=side;s++) for(int y=0;y<=10;y++){
-            BlockPos p=g.axisZ()?r.offset(s,y,a):r.offset(a,y,s);
-            BlockState st=level.getBlockState(p);
-            if(st.getLightEmission(level,p)<8)continue;
-            list.add(new Saved(p.immutable(),st));
-            if(st.hasProperty(BlockStateProperties.LIT)) level.setBlock(p,st.setValue(BlockStateProperties.LIT,false),2);
-            else level.setBlock(p,Blocks.GRAY_STAINED_GLASS.defaultBlockState(),2);
-            if(list.size()>=180)break outer;
+    public static void pulse(ServerPlayer player, boolean off) {
+        SceneLights scene = SCENES.computeIfAbsent(player.getUUID(), id -> capture(player));
+        if (scene.off == off) return;
+        ServerLevel level = player.serverLevel();
+        if (off) {
+            for (Saved s : scene.lights) {
+                BlockState current = level.getBlockState(s.pos());
+                BlockState original = s.state();
+                if (original.hasProperty(BlockStateProperties.LIT)) {
+                    level.setBlock(s.pos(), original.setValue(BlockStateProperties.LIT, false), 2);
+                } else if (current.getLightEmission(level, s.pos()) > 0 || original.getLightEmission(level, s.pos()) > 0) {
+                    level.setBlock(s.pos(), Blocks.BLACK_CONCRETE.defaultBlockState(), 2);
+                }
+            }
+        } else {
+            for (Saved s : scene.lights) level.setBlock(s.pos(), s.state(), 2);
         }
-        SAVED.put(player.getUUID(),list);
+        scene.off = off;
+    }
+
+    /** Keep all captured station lights physically off. */
+    public static void blackout(ServerPlayer player) {
+        pulse(player, true);
+    }
+
+    private static SceneLights capture(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        StationBuilder.RailGeometry g = StationBuilder.geometry(player);
+        BlockPos r = g.rail();
+        List<Saved> list = new ArrayList<>();
+
+        // Larger than the old scan: full platform, opposite platform edge, ceiling and tunnel mouth.
+        int along = 90, side = 26;
+        outer:
+        for (int a=-along; a<=along; a++) {
+            for (int s=-side; s<=side; s++) {
+                for (int y=-1; y<=15; y++) {
+                    BlockPos p = g.axisZ() ? r.offset(s,y,a) : r.offset(a,y,s);
+                    BlockState st = level.getBlockState(p);
+                    if (st.getLightEmission(level,p) < 5) continue;
+                    list.add(new Saved(p.immutable(), st));
+                    if (list.size() >= 1200) break outer;
+                }
+            }
+        }
+        return new SceneLights(list);
     }
 
     public static void restore(ServerPlayer player) {
-        List<Saved> list=SAVED.remove(player.getUUID());if(list==null)return;
-        ServerLevel level=player.serverLevel();
-        for(Saved s:list)level.setBlock(s.pos(),s.state(),2);
+        SceneLights scene = SCENES.remove(player.getUUID());
+        if (scene == null) return;
+        ServerLevel level = player.serverLevel();
+        for (Saved s : scene.lights) level.setBlock(s.pos(), s.state(), 2);
     }
 }
