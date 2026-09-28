@@ -67,7 +67,6 @@ public class Train31Mod {
     public static final RegistryObject<SoundEvent> WHISPER_FOUND_YOU=sound("whisper_found_you");
     public static final RegistryObject<SoundEvent> WHISPER_SHOULD_LISTEN=sound("whisper_should_listen");
 
-    // Kept so older resource packs/worlds do not break.
     public static final RegistryObject<SoundEvent> WHISPER_DIE_HERE=sound("whisper_die_here");
     public static final RegistryObject<SoundEvent> WHISPER_FINAL=sound("whisper_final");
 
@@ -113,6 +112,14 @@ public class Train31Mod {
     @SubscribeEvent
     public void commands(RegisterCommandsEvent e){
         e.getDispatcher().register(Commands.literal("train31")
+                .then(Commands.literal("tokyo").executes(c->{
+                    ServerPlayer p=c.getSource().getPlayerOrException();
+                    StoryDirector.reset(p);
+                    PhysicalTrainBuilder.restore(p);
+                    SceneSetup.tokyoPreset(p);
+                    StationBuilder.prepare(p);
+                    return 1;
+                }))
                 .then(Commands.literal("auto").executes(c->{
                     ServerPlayer p=c.getSource().getPlayerOrException();
                     PhysicalTrainBuilder.restore(p);
