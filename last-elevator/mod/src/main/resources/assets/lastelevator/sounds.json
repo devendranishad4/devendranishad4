@@ -1,0 +1,6 @@
+{
+  "lift_motor": {"subtitle":"The lift moves","sounds":["lastelevator:lift_motor"]},
+  "passenger_breath": {"subtitle":"Breathing behind you","sounds":["lastelevator:passenger_breath"]},
+  "horror_sting": {"subtitle":"The Passenger appears","sounds":["lastelevator:horror_sting"]},
+  "floor_ambience": {"subtitle":"The building hums","sounds":["lastelevator:floor_ambience"]}
+}

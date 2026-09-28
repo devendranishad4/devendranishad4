@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -33,6 +34,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import net.minecraft.resources.ResourceLocation;
 
 
 /** Map-independent server-side story director. Everything happens only after /le start. */
@@ -41,10 +43,18 @@ public class LastElevator {
     public static final String ID="lastelevator";
     public static final DeferredRegister<EntityType<?>> ENTITIES=DeferredRegister.create(ForgeRegistries.ENTITY_TYPES,ID);
     public static final DeferredRegister<Item> ITEMS=DeferredRegister.create(ForgeRegistries.ITEMS,ID);
+    public static final DeferredRegister<SoundEvent> SOUNDS=DeferredRegister.create(ForgeRegistries.SOUND_EVENTS,ID);
     public static final RegistryObject<EntityType<Passenger>> PASSENGER=ENTITIES.register("passenger",
             ()->EntityType.Builder.<Passenger>of(Passenger::new,MobCategory.MONSTER).sized(.75f,2.6f)
                     .clientTrackingRange(12).build(ID+":passenger"));
     public static final RegistryObject<Item> FUSE=ITEMS.register("maintenance_fuse",()->new Item(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<SoundEvent> MOTOR=registerSound("lift_motor");
+    public static final RegistryObject<SoundEvent> BREATH=registerSound("passenger_breath");
+    public static final RegistryObject<SoundEvent> STING=registerSound("horror_sting");
+    public static final RegistryObject<SoundEvent> AMBIENCE=registerSound("floor_ambience");
+    private static RegistryObject<SoundEvent> registerSound(String name){
+        return SOUNDS.register(name,()->SoundEvent.createVariableRangeEvent(new ResourceLocation(ID,name)));
+    }
     private static final String[] MARKERS={"lobby","car","office","hotel","maintenance","stair","zero","street",
             "fuse1","fuse2","fuse3","passenger_rule","passenger_maintenance","passenger_zero"};
     private static final String[] SCENES={"lobby","office","hotel","hotel","maintenance","office","stair","zero","street"};
@@ -54,7 +64,7 @@ public class LastElevator {
 
     public LastElevator(){
         IEventBus bus=FMLJavaModLoadingContext.get().getModEventBus();
-        ENTITIES.register(bus);ITEMS.register(bus);bus.addListener(this::attributes);
+        ENTITIES.register(bus);ITEMS.register(bus);SOUNDS.register(bus);bus.addListener(this::attributes);
         MinecraftForge.EVENT_BUS.addListener(this::registerCommands);
         MinecraftForge.EVENT_BUS.addListener(this::tick);
         MinecraftForge.EVENT_BUS.addListener(this::pickup);
@@ -125,6 +135,7 @@ public class LastElevator {
         d.putBoolean("lookScare",false);
         d.putInt("transition",12); // short lift travel sound before the safe teleport
         sound(p,SoundEvents.IRON_DOOR_CLOSE,.7f);
+        sound(p,MOTOR.get(),.9f);
         msg(p,"Next: "+NAMES[target]);return 1;
     }
     private static void cleanup(ServerPlayer p){
@@ -219,7 +230,7 @@ public class LastElevator {
         mob.setNoAi(!active);
         ((ServerLevel)p.level()).addFreshEntity(mob);
         state(p).putUUID("passengerId",mob.getUUID());
-        sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.55f);
+        sound(p,STING.get(),.95f);
     }
     private static int auto(ServerPlayer p,int seconds){
         int result=start(p,seconds);
@@ -244,6 +255,8 @@ public class LastElevator {
         }
         int t=d.getInt("elapsed")+1;d.putInt("elapsed",t);
         int stage=d.getInt("scene");
+        if(t==1&&(stage==0||stage==2||stage==4||stage==7))sound(p,AMBIENCE.get(),1f);
+        if(t%200==0&&(stage==2||stage==4||stage==7))sound(p,AMBIENCE.get(),1f);
         if(d.getBoolean("auto")){
             if(t==50&&stage==1)giveFuse(p,1);
             if(t==60&&stage==2)giveFuse(p,2);
@@ -252,14 +265,14 @@ public class LastElevator {
         if(t==20&&stage==2){msg(p,"The directory has no floor 13.");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.8f);}
         if(t==40&&stage==3){msg(p,"RULE: After the bell, don't look at the other passenger.");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.6f);}
         if(t==85&&stage==3){sound(p,SoundEvents.WOOD_STEP,.7f);}
-        if(t==110&&stage==3)spawn(p,"passenger_rule",false);
+        if(t==110&&stage==3){spawn(p,"passenger_rule",false);sound(p,BREATH.get(),.7f);}
         if(stage==3&&t>=110&&t<260&&!d.getBoolean("lookScare")&&d.hasUUID("passengerId")){
             var seen=((ServerLevel)p.level()).getEntity(d.getUUID("passengerId"));
             if(seen!=null&&p.distanceToSqr(seen)<144){
                 var direction=seen.getEyePosition().subtract(p.getEyePosition()).normalize();
                 if(p.getLookAngle().dot(direction)>.91&&p.hasLineOfSight(seen)){
                     d.putBoolean("lookScare",true);msg(p,"DON'T LOOK AT THE OTHER PASSENGER!");
-                    sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.35f);
+                    sound(p,STING.get(),.7f);
                     ((ServerLevel)p.level()).sendParticles(ParticleTypes.SMOKE,seen.getX(),seen.getY()+1.5,seen.getZ(),18,.4,.5,.4,.02);
                 }
             }

@@ -6,9 +6,10 @@ Minecraft Java **1.20.1**, Forge **47.4.20**, Java **17**. This package contains
 
 - Story script: written end to end.
 - Lobby, office, hotel, maintenance, floor 0 and stair schematics: generated; NBT headers, dimensions, palette indices, lengths and air-space checks validated locally.
-- Passenger and director: source implementation; compilation and actual Forge runtime testing remain pending.
+- Passenger and director: earlier build compiled; the latest audio revision and actual Forge runtime test remain pending.
+- Original synthesised lift, breathing, ambience and scare audio is included; spoken lines still need recording.
 - Tokyo Inspired City world: inspected; it is Minecraft 1.20.1. The build has **not** been pasted into or saved over the original world.
-- Current limitation: Gradle distribution and Forge dependencies could not be fetched in this environment, so no JAR could be compiled or tested. The scenes are also not yet anchored to a selected tower footprint; generated images remain visual targets.
+- Current limitation: GitHub compiles the JAR, but a full client recording and shader/map inspection have not been completed. The generated images remain visual targets; the sets are block-built layouts, not pixel-identical replicas.
 
 ## Set files
 
@@ -18,13 +19,13 @@ The source now includes an in-mod `/le build` command that reads the schematics 
 
 ## Mod build when dependencies are available
 
-Open `mod/` on a Windows computer with Java 17 and internet access to Forge's Maven and Gradle hosts, then run `gradlew.bat build`. The expected JAR goes in `mod/build/libs/`. This is a source build attempt until the JAR compiles and completes an in-game test.
+The GitHub Actions build compiles `mod/` with Java 17 and Forge 47.4.20 and uploads the JAR. A successful compile validates the mod's Java/API usage; a game launch and full scene run are separate checks.
 
 ## Director commands planned in source
 
 `/le build` is intended to set all markers automatically. For hand-placed or modified sets, stand at each actual location and use `/le mark <name>`. Required names: `lobby`, `car`, `office`, `hotel`, `maintenance`, `stair`, `zero`, `street`, `fuse1`, `fuse2`, `fuse3`, `passenger_maintenance`, `passenger_zero`. Every arrival marker needs a solid floor and two blocks of clear space. The `car` marker is for the elevator's button proximity check.
 
-Use `/le check`, `/le setup`, `/le auto 20` for a fully timed recording pass. The mod source schedules nine scenes over approximately 13 minutes after a 20-second countdown and awards the three fuses during that run. The cold open should be recorded as a separate shot and edited to the beginning. **AUTO is source only until a JAR builds and is tested in-game.**
+Run `/le build` on an empty lot, then `/le check`, `/le setup`, `/le auto 20` for a fully timed recording pass. The mod schedules nine scenes over approximately 13 minutes after a 20-second countdown and awards the three fuses during that run. The cold open should be recorded as a separate shot and edited to the beginning. Save a copy of the world before using `/le build` and walk through it once before filming.
 
 For manual control, use `/le start 20`, then `/le next` or the marked car's stone button for scenes 1–8. `pause`, `resume`, `stop`, `reset`, `/le scene 0..8` and `/le fuse 1..3` support retakes. `/le scene` bypasses the fuse gate for testing. The Passenger does no damage. Do not use `/le auto` for a final recording before path and timing checks in the selected world.
 
