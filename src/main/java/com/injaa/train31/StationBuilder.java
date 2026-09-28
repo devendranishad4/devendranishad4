@@ -52,7 +52,8 @@ public final class StationBuilder {
         player.getPersistentData().putLong("train31_cctv", SceneSetup.cctv(player).asLong());
         player.getPersistentData().putBoolean("train31_prepared", true);
 
-        // No giant block monitor wall anymore. Only the small camera props are spawned.
+        // Camera viewpoints are invisible. No physical block is placed on the actual POV anymore,
+        // which prevents the old giant black square from covering the CCTV feed.
         spawnCameras(level, player);
     }
 
@@ -163,8 +164,6 @@ public final class StationBuilder {
         a.setInvisible(true); a.setNoGravity(true); a.setInvulnerable(true); a.setSilent(true);
         a.setPos(x,y,z); a.setYRot(yaw); a.setXRot(pitch); a.setYHeadRot(yaw);
         a.addTag(CAMERA_TAG); level.addFreshEntity(a);
-        display(level,x,y-0.08,z,Blocks.BLACK_CONCRETE.defaultBlockState(),0.34f,0.24f,0.48f,yaw,CAMERA_PROP_TAG);
-        display(level,x,y-0.08,z,Blocks.OBSERVER.defaultBlockState(),0.14f,0.14f,0.16f,yaw,CAMERA_PROP_TAG);
         return a.getUUID();
     }
 
