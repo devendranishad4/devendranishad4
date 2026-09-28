@@ -106,19 +106,23 @@ public final class SceneSetup {
         p.getPersistentData().putLong(RAIL,rail.asLong());
         p.getPersistentData().putLong(TUNNEL,tunnel.asLong());
 
-        BlockPos cam1 = findCameraAir(level, platform.relative(forward.getOpposite(),7).relative(trackSide.getOpposite(),2).above(3));
-        BlockPos cam2 = findCameraAir(level, platform.relative(forward,17).relative(trackSide.getOpposite(),2).above(3));
-        BlockPos cam3 = findCameraAir(level, platform.relative(forward.getOpposite(),18).relative(trackSide.getOpposite(),2).above(3));
-        BlockPos cam4 = findCameraAir(level, platform.relative(forward,4).relative(trackSide,1).above(4));
+        // CCTV viewpoints are stored at player-feet height because StationBuilder adds the 1.72 m eye offset.
+        // The old setup used .above(3/.above(4), which pushed the actual camera into/near the station ceiling.
+        BlockPos cam1 = findCameraAir(level, platform.relative(forward.getOpposite(),8).relative(trackSide.getOpposite(),1));
+        BlockPos cam2 = findCameraAir(level, platform.relative(forward,14).relative(trackSide.getOpposite(),1));
+        BlockPos cam3 = findCameraAir(level, platform.relative(forward.getOpposite(),16).relative(trackSide.getOpposite(),1));
+        BlockPos cam4 = findCameraAir(level, platform.relative(forward,5).relative(trackSide.getOpposite(),1));
 
-        saveAutoCamera(p,1,cam1,platform.above(1));
-        saveAutoCamera(p,2,cam2,rail.relative(forward,6).above(1));
-        saveAutoCamera(p,3,cam3,platform.relative(forward,5).above(1));
+        // Four clean cinematic angles: platform wide, tunnel/rail, long platform, and train-stop close view.
+        saveAutoCamera(p,1,cam1,platform.relative(forward,4).above(1));
+        saveAutoCamera(p,2,cam2,rail.relative(forward.getOpposite(),3).above(1));
+        saveAutoCamera(p,3,cam3,platform.relative(forward,8).above(1));
         saveAutoCamera(p,4,cam4,rail.above(1));
 
         dirty(p);
         p.sendSystemMessage(Component.literal("§a§lTRAIN 31 AUTO SETUP COMPLETE"));
         p.sendSystemMessage(Component.literal("§7Platform/rail/tunnel + all 4 CCTV cameras were placed automatically. Track side detected: §f"+trackSide.getName()));
+        p.sendSystemMessage(Component.literal("§8CAM1 "+coord(cam1)+" | CAM2 "+coord(cam2)+" | CAM3 "+coord(cam3)+" | CAM4 "+coord(cam4)));
     }
 
     private static void saveAutoCamera(ServerPlayer p,int index,BlockPos camera,BlockPos target){
