@@ -9,7 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.io.InputStream;
@@ -48,8 +48,20 @@ public final class SceneBuilder {
                         Block block=ForgeRegistries.BLOCKS.getValue(new ResourceLocation(key.split("\\[")[0]));
                         if(block==null||block==Blocks.AIR&&!key.startsWith("minecraft:air"))return "Unknown block: "+key;
                         BlockState state=block.defaultBlockState();
-                        if(key.contains("lit=true")&&state.hasProperty(BlockStateProperties.LIT))state=state.setValue(BlockStateProperties.LIT,true);
-                        if(key.contains("persistent=true")&&state.hasProperty(BlockStateProperties.PERSISTENT))state=state.setValue(BlockStateProperties.PERSISTENT,true);
+                        int bracket=key.indexOf('[');
+                        if(bracket>=0&&key.endsWith("]")){
+                            for(String pair:key.substring(bracket+1,key.length()-1).split(",")){
+                                String[] kv=pair.split("=",2);
+                                if(kv.length!=2)return "Invalid block property: "+key;
+                                boolean found=false;
+                                for(Property<?> property:state.getProperties()){
+                                    if(property.getName().equals(kv[0])){
+                                        state=withProperty(state,property,kv[1]);found=true;break;
+                                    }
+                                }
+                                if(!found)return "Unknown block property: "+key;
+                            }
+                        }
                         states[id]=state;
                     }
                     if(w<=0||h<=0||l<=0||states.length==0)return "Invalid schematic: "+place.resource;
@@ -83,7 +95,7 @@ public final class SceneBuilder {
             marker(p,"car",origin.offset(36,1,31));marker(p,"office",origin.offset(20,15,11));
             marker(p,"hotel",origin.offset(10,25,9));marker(p,"maintenance",origin.offset(10,35,10));
             marker(p,"stair",origin.offset(59,1,19));marker(p,"zero",origin.offset(10,45,9));
-            marker(p,"fuse1",origin.offset(8,15,16));marker(p,"fuse2",origin.offset(46,25,16));
+            marker(p,"fuse1",origin.offset(8,15,16));marker(p,"fuse2",origin.offset(46,25,10));
             marker(p,"fuse3",origin.offset(47,35,3));
             marker(p,"passenger_rule",origin.offset(18,25,9));
             marker(p,"passenger_maintenance",origin.offset(42,35,10));
@@ -91,8 +103,11 @@ public final class SceneBuilder {
             CompoundTag story=p.getPersistentData().getCompound(LastElevator.ID);
             story.putBoolean("built",true);story.putLong("builtOrigin",origin.asLong());
             p.teleportTo(world,origin.getX()+23.5,origin.getY()+1,origin.getZ()+8.5,0,0);
-            return "Placed all six sets and 13 markers. Run /le check, then /le setup and /le auto 20.";
+            return "Placed all six sets and 14 markers. Run /le check, then /le setup and /le auto 20.";
         }catch(Exception error){return "Build stopped: "+error.getClass().getSimpleName()+": "+error.getMessage();}
+    }
+    private static <T extends Comparable<T>> BlockState withProperty(BlockState state,Property<T> property,String value){
+        return property.getValue(value).map(v->state.setValue(property,v)).orElse(state);
     }
     private static void marker(ServerPlayer p,String name,BlockPos at){
         CompoundTag data=p.getPersistentData(),story=data.getCompound(LastElevator.ID),marks=story.getCompound("marks"),value=new CompoundTag();
