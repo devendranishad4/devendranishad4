@@ -39,9 +39,9 @@ public final class GhostPowerController {
             if (PhysicalTrainBuilder.exists(p)) PhysicalTrainBuilder.restore(p);
         }
 
-        // 11:57 PM — seal the route back toward the entrance so the player is trapped
-        // on the horror side of the station for the final section.
-        if (t >= 14400 && !p.getPersistentData().getBoolean(ENTRANCE_SEALED)) {
+        // 11:47 PM — seal the route back toward the entrance early,
+        // so once the horror properly begins the player cannot simply escape upstairs.
+        if (t >= 2400 && !p.getPersistentData().getBoolean(ENTRANCE_SEALED)) {
             sealEntrance(p);
             playAt(p, SceneSetup.start(p), Train31Mod.METAL_KNOCKS.get(), 2.2f, 0.62f);
             playAt(p, SceneSetup.start(p), Train31Mod.HORROR_HIT.get(), 1.15f, 0.88f);
