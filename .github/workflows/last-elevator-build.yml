@@ -4,9 +4,6 @@ on:
     paths:
       - 'last-elevator/**'
       - '.github/workflows/last-elevator-build.yml'
-  push:
-    branches:
-      - 'codex/last-elevator-build'
   workflow_dispatch:
 jobs:
   build:

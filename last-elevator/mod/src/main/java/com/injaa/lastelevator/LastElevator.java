@@ -46,7 +46,7 @@ public class LastElevator {
                     .clientTrackingRange(12).build(ID+":passenger"));
     public static final RegistryObject<Item> FUSE=ITEMS.register("maintenance_fuse",()->new Item(new Item.Properties().stacksTo(1)));
     private static final String[] MARKERS={"lobby","car","office","hotel","maintenance","stair","zero","street",
-            "fuse1","fuse2","fuse3","passenger_maintenance","passenger_zero"};
+            "fuse1","fuse2","fuse3","passenger_rule","passenger_maintenance","passenger_zero"};
     private static final String[] SCENES={"lobby","office","hotel","hotel","maintenance","office","stair","zero","street"};
     private static final String[] NAMES={"Lobby","Office","Hotel 13","The rule","Maintenance","Fuse panel","Stair loop","Floor 0","Escape"};
     // Timed solo run: about 13 minutes of action after the 20-second recording delay.
@@ -110,6 +110,7 @@ public class LastElevator {
         d.putInt("delay",seconds*20);d.putInt("scene",0);d.putInt("elapsed",0);
         d.putInt("fuses",0);d.putInt("transition",0);
         d.putBoolean("auto",false);
+        d.putBoolean("lookScare",false);
         for(int i=1;i<=3;i++)d.putBoolean("fuse"+i,false);
         cleanup(p);msg(p,"Recording delay: "+seconds+" seconds. Close chat and start filming.");return 1;
     }
@@ -121,6 +122,7 @@ public class LastElevator {
         if(!bypass&&target>=5&&d.getInt("fuses")<3){msg(p,"Collect all three fuses first, or use /le scene for a retake.");return 0;}
         if(!safe(p,SCENES[target]))return 0;
         cleanup(p);d.putInt("scene",target);d.putInt("elapsed",0);
+        d.putBoolean("lookScare",false);
         d.putInt("transition",12); // short lift travel sound before the safe teleport
         sound(p,SoundEvents.IRON_DOOR_CLOSE,.7f);
         msg(p,"Next: "+NAMES[target]);return 1;
@@ -135,8 +137,14 @@ public class LastElevator {
     }
     private static int reset(ServerPlayer p){
         CompoundTag d=state(p);cleanup(p);d.putBoolean("running",false);d.putBoolean("paused",false);
+        if(d.getBoolean("built")){
+            BlockPos origin=BlockPos.of(d.getLong("builtOrigin"));
+            for(int x=49;x<=50;x++)for(int y=45;y<=48;y++)for(int z=8;z<=11;z++)
+                p.level().setBlock(origin.offset(x,y,z),Blocks.IRON_BLOCK.defaultBlockState(),2);
+        }
         d.putInt("delay",0);d.putInt("scene",0);d.putInt("elapsed",0);d.putInt("transition",0);
         d.putInt("fuses",0);d.putBoolean("auto",false);
+        d.putBoolean("lookScare",false);
         for(int i=0;i<p.getInventory().getContainerSize();i++)
             if(p.getInventory().getItem(i).is(FUSE.get()))p.getInventory().setItem(i,ItemStack.EMPTY);
         for(int i=1;i<=3;i++)d.putBoolean("fuse"+i,false);
@@ -203,11 +211,12 @@ public class LastElevator {
             if(e.getPos().closerThan(car,7))scene(p,d.getInt("scene")+1,false);
         }
     }
-    private void spawn(ServerPlayer p,String name){
+    private void spawn(ServerPlayer p,String name,boolean active){
         if(!marked(p,name)||!safe(p,name))return;
         Passenger mob=PASSENGER.get().create(p.level());if(mob==null)return;
         BlockPos at=BlockPos.of(marker(p,name).getLong("pos"));
         mob.moveTo(at.getX()+.5,at.getY(),at.getZ()+.5,0,0);
+        mob.setNoAi(!active);
         ((ServerLevel)p.level()).addFreshEntity(mob);
         state(p).putUUID("passengerId",mob.getUUID());
         sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.55f);
@@ -243,11 +252,34 @@ public class LastElevator {
         if(t==20&&stage==2){msg(p,"The directory has no floor 13.");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.8f);}
         if(t==40&&stage==3){msg(p,"RULE: After the bell, don't look at the other passenger.");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.6f);}
         if(t==85&&stage==3){sound(p,SoundEvents.WOOD_STEP,.7f);}
+        if(t==110&&stage==3)spawn(p,"passenger_rule",false);
+        if(stage==3&&t>=110&&t<260&&!d.getBoolean("lookScare")&&d.hasUUID("passengerId")){
+            var seen=((ServerLevel)p.level()).getEntity(d.getUUID("passengerId"));
+            if(seen!=null&&p.distanceToSqr(seen)<144){
+                var direction=seen.getEyePosition().subtract(p.getEyePosition()).normalize();
+                if(p.getLookAngle().dot(direction)>.91&&p.hasLineOfSight(seen)){
+                    d.putBoolean("lookScare",true);msg(p,"DON'T LOOK AT THE OTHER PASSENGER!");
+                    sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.35f);
+                    ((ServerLevel)p.level()).sendParticles(ParticleTypes.SMOKE,seen.getX(),seen.getY()+1.5,seen.getZ(),18,.4,.5,.4,.02);
+                }
+            }
+        }
+        if(t==260&&stage==3)cleanup(p);
         if(t==40&&stage==4){sound(p,SoundEvents.LEVER_CLICK,.6f);msg(p,"The radio repeats your voice...");}
-        if(t==140&&stage==4){spawn(p,"passenger_maintenance");msg(p,"Run to the lift!");}
+        if(t==140&&stage==4){spawn(p,"passenger_maintenance",true);msg(p,"Run to the lift!");}
         if(t==50&&stage==6){msg(p,"Same landing. One lamp is gone.");sound(p,SoundEvents.IRON_DOOR_CLOSE,.7f);}
         if(t==180&&stage==6){msg(p,"The landing repeats again. Find floor 0.");}
-        if(t==70&&stage==7){spawn(p,"passenger_zero");msg(p,"Break the emergency seal and reach the exit!");}
+        if(stage==6&&(t==400||t==1050||t==1600)){
+            teleport(p,"stair");sound(p,SoundEvents.IRON_DOOR_CLOSE,.8f);
+            msg(p,"The same landing again... the lights are changing.");
+        }
+        if(t==70&&stage==7){spawn(p,"passenger_zero",true);msg(p,"Break the emergency seal and reach the exit!");}
+        if(t==1300&&stage==7&&d.getBoolean("built")){
+            BlockPos origin=BlockPos.of(d.getLong("builtOrigin"));
+            for(int x=49;x<=50;x++)for(int y=45;y<=48;y++)for(int z=8;z<=11;z++)
+                p.level().setBlock(origin.offset(x,y,z),Blocks.AIR.defaultBlockState(),2);
+            sound(p,SoundEvents.IRON_DOOR_OPEN,.7f);msg(p,"Emergency seal open—RUN!");
+        }
         if(t==40&&stage==8){msg(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.45f);}
         if((stage==4||stage==7)&&t%30==0)((ServerLevel)p.level()).sendParticles(ParticleTypes.SMOKE,p.getX(),p.getY()+.8,p.getZ(),2,.4,.3,.4,0);
         if(d.getBoolean("auto")&&t>=AUTO_SECONDS[stage]*20){
