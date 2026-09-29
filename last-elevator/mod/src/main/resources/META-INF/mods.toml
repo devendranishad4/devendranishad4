@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+[[mods]]
+modId="lastelevator"
+version="0.4.4-preview"
+displayName="The Last Elevator Director"
+description="Single-player recording director for The Last Elevator horror story."
+[[dependencies.lastelevator]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.lastelevator]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"

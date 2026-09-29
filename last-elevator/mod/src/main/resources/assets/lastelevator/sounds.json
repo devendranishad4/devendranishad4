@@ -1,0 +1,19 @@
+{
+  "lift_motor": {"subtitle":"The lift moves","sounds":["lastelevator:lift_motor"]},
+  "passenger_breath": {"subtitle":"Breathing behind you","sounds":["lastelevator:passenger_breath"]},
+  "horror_sting": {"subtitle":"The Passenger appears","sounds":["lastelevator:horror_sting"]},
+  "floor_ambience": {"subtitle":"The building hums","sounds":["lastelevator:floor_ambience"]},
+  "lift_door": {"subtitle":"Heavy lift doors move","sounds":["lastelevator:lift_door"]},
+  "lift_bell": {"subtitle":"A distant lift bell rings","sounds":["lastelevator:lift_bell"]},
+  "distant_steps": {"subtitle":"Footsteps behind you","sounds":["lastelevator:distant_steps"]},
+  "broken_radio": {"subtitle":"The radio crackles","sounds":["lastelevator:broken_radio"]},
+  "distant_knock": {"subtitle":"Knocking in the distance","sounds":["lastelevator:distant_knock"]},
+  "electrical_fault": {"subtitle":"Electricity sputters","sounds":["lastelevator:electrical_fault"]},
+  "tokyo_rain_lobby": {"subtitle":"Rain on the Tokyo tower windows","sounds":["lastelevator:tokyo_rain_lobby"]},
+  "office_after_hours": {"subtitle":"The empty office hums","sounds":["lastelevator:office_after_hours"]},
+  "hotel_thirteen_hall": {"subtitle":"A trolley moves in the hotel","sounds":["lastelevator:hotel_thirteen_hall"]},
+  "maintenance_power_room": {"subtitle":"The maintenance machinery strains","sounds":["lastelevator:maintenance_power_room"]},
+  "stairwell_repeating": {"subtitle":"Footsteps echo through the stairs","sounds":["lastelevator:stairwell_repeating"]},
+  "floor_zero_void": {"subtitle":"Floor zero is almost silent","sounds":["lastelevator:floor_zero_void"]},
+  "passenger_pursuit": {"subtitle":"The Passenger is closing in","sounds":["lastelevator:passenger_pursuit"]}
+}

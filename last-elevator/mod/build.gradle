@@ -1,0 +1,23 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+version = '0.4.4-preview'
+group = 'com.injaa.lastelevator'
+base { archivesName = 'LastElevator-Forge-1.20.1' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+minecraft {
+    mappings channel: 'official', version: '1.20.1'
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'info'
+            mods { lastelevator { source sourceSets.main } }
+        }
+        client {}
+        gameTestServer { property 'forge.enabledGameTestNamespaces', 'lastelevator' }
+    }
+}
+dependencies { minecraft 'net.minecraftforge:forge:1.20.1-47.4.20' }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

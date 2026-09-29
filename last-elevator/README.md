@@ -1,0 +1,28 @@
+# The Last Elevator — 0.4.4 preview rebuild
+
+Minecraft Java 1.20.1, Forge 47.4.20, Java 17. Use a **copy** of the supplied Tokyo Inspired City 1.0.10 world. The original 0.3.1 prototype was rejected in a real player test: its lift was static, stages visibly teleported the player, fuses were handed out by a timer, and the scares could occur off camera. Do not film the 0.3.1 build.
+
+This source rebuild puts the lobby, floor 6, hotel floor 13, maintenance, stairs, floor 0 and exit in one existing Tokyo tower. It cuts a vertical shaft through nine original floor levels; a decorated cabin travels one block at a time between landings with shutters closing and opening. The player must press the cabin button. Fuse 1 is revealed by opening a desk drawer inside the original office room; the other two are physical pickups. The electrical-room key, fuse panel, service stairs, emergency seal and fire stair are interacted with in sequence. The Passenger appears in the car, chases at maintenance, and reveals itself on floor 0. A separate cold open is recorded after the ending.
+
+## Status
+
+The previous build passed a Forge compile and game-server smoke test for cabin placement, relocation, and shutters. This version adds seven original stereo atmospheres generated during the GitHub build: Tokyo rain, office, hotel, maintenance, stairwell, floor zero, and pursuit. They attach to the player in the Ambience sound category, begin on scene triggers, and stop when a chase or new scene takes over. **No full Minecraft client test or complete recording has passed.** The block preview images are geometry renders using colors from the original map; they are not in-game screenshots. This is still a preview, not a finished video mod.
+
+Objectives now appear in a compact top-right HUD with a direction and distance. The repeating actionbar messages and most scene chat lines were removed. From the installed lobby spawn at X -254 Y 75 Z 107, follow the lit copper floor line north through the arch and east to the actual lift door at X -236 Y 75 Z 100. In an existing 0.4.x Tokyo world, run `/le tokyo` once with the new JAR to add this guide without reinstalling the tower.
+
+Some planned script details need client validation or additional work: a live echo of the creator's own recorded voice, the player-head skin on offline accounts, exterior lobby approach and interior visual polish, Passenger line of sight and pathfinding, and a full timed camera-safe playthrough. The cold open is a separate shot to cut to the beginning. The player's spoken lines are performed during recording.
+
+## Intended play route
+
+1. In a **fresh copy** of Tokyo Inspired City 1.0.10, run `/difficulty normal`, `/le tokyo`, `/le check`, `/le setup`.
+2. For the cold open shot, run `/le coldopen`, record the corridor sprint, then `/le reset` and `/le setup`.
+3. Start the main take with `/le auto 20`. After the 20-second delay, follow the on-screen objective. AUTO stages sounds, clues, scares, and world events; it **never carries you to another floor**. Enter the real cabin and press its floor button to ride. Interact with the breaker, barred door, fuse panel and emergency seal when the objective asks.
+4. `/le pause`, `/le resume`, `/le stop`, `/le reset` are recording controls. `/le scene 0..8` is a debug retake command and may start a stage without positioning you; it is not part of the normal take.
+
+The cold open and ending need editing around the main gameplay. Retakes should start with `/le reset`, `/le setup`, then `/le auto 20`.
+
+## Build
+
+GitHub Actions builds `mod/` using the pinned Forge dependency and uploads the JAR. A successful compile checks Java and assets, but only a Minecraft client run can validate real moving-block motion, collision, renderer, lighting, mob navigation, and the full 13–15 minute recording experience.
+
+For a local source build, install Python 3.11 with `numpy==1.26.4`, `scipy==1.13.1`, and FFmpeg. Run `python3 make_scene_ambience.py` from `last-elevator/` before `gradle build` in `mod/`. GitHub Actions performs these steps automatically.
