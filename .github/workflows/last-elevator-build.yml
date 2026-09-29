@@ -26,6 +26,10 @@ jobs:
       - name: Compile Forge mod
         working-directory: last-elevator/mod
         run: gradle build --stacktrace
+      - name: Run Forge game-server smoke test
+        working-directory: last-elevator/mod
+        timeout-minutes: 10
+        run: gradle runGameTestServer --stacktrace
       - name: Upload compiled mod
         uses: actions/upload-artifact@v4
         with:

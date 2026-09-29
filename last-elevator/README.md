@@ -1,4 +1,4 @@
-# The Last Elevator — 0.4.1 preview rebuild
+# The Last Elevator — 0.4.2 preview rebuild
 
 Minecraft Java 1.20.1, Forge 47.4.20, Java 17. Use a **copy** of the supplied Tokyo Inspired City 1.0.10 world. The original 0.3.1 prototype was rejected in a real player test: its lift was static, stages visibly teleported the player, fuses were handed out by a timer, and the scares could occur off camera. Do not film the 0.3.1 build.
 
@@ -6,7 +6,7 @@ This source rebuild puts the lobby, floor 6, hotel floor 13, maintenance, stairs
 
 ## Status
 
-The prior preview source passed a Forge compile. The latest lobby, electrical room, and control corrections require a fresh compile. **No full Minecraft client test or complete recording has passed.** The block preview images are geometry renders using colors from the original map; they are not in-game screenshots. This is still a preview, not a finished video mod.
+The prior preview source passed a Forge compile. The current build also runs a Forge game-server smoke test for cabin placement, relocation, and shutters. **No full Minecraft client test or complete recording has passed.** The block preview images are geometry renders using colors from the original map; they are not in-game screenshots. This is still a preview, not a finished video mod.
 
 Some planned script details need client validation or additional work: a live echo of the creator's own recorded voice, the player-head skin on offline accounts, exterior lobby approach and interior visual polish, Passenger line of sight and pathfinding, and a full timed camera-safe playthrough. The cold open is a separate shot to cut to the beginning. The player's spoken lines are performed during recording.
 
