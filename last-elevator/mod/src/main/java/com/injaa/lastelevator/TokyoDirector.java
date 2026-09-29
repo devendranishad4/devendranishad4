@@ -55,7 +55,12 @@ public final class TokyoDirector {
                 ||!w.getBlockState(UPPER).is(Blocks.POLISHED_DIORITE))
             return "This is not the supplied Tokyo Inspired City 1.0.10 world. No blocks changed.";
         CompoundTag d=player.getPersistentData().getCompound(LastElevator.ID);
-        if(d.getInt("towerVersion")>=4)return "Tower already installed. Run /le reset, /le setup, /le auto 20.";
+        if(d.getInt("towerVersion")>=4){
+            TowerLift.guides(w);
+            sign(w,-250,75,105,"LIFT EAST >>","FOLLOW GOLD","FLOOR LINE","");
+            sign(w,-240,75,102,"LIFT DOOR >>","ENTER CABIN","PRESS BUTTON","");
+            return "Tower with lift already installed; the gold route to X -236 Y 75 Z 100 is refreshed.";
+        }
         TowerLift.install(w);
         // The original rooms remain on upper floors; dress each corridor according to the story.
         for(int floor:new int[]{84,89,99,114}){
@@ -71,8 +76,8 @@ public final class TokyoDirector {
         }
         // Readable clues and floor indicators sit next to the actual lifts.
         sign(w,-247,75,101,"NIGHT SHIFT","11:47 PM","Floor 6: panel","3 fuses missing");
-        sign(w,-250,75,105,"LIFT EAST","FOLLOW THE","LIT CORRIDOR","");
-        sign(w,-240,75,102,"LIFT","Press button","inside car","");
+        sign(w,-250,75,105,"LIFT EAST >>","FOLLOW GOLD","FLOOR LINE","");
+        sign(w,-240,75,102,"LIFT DOOR >>","ENTER CABIN","PRESS BUTTON","");
         sign(w,-255,85,102,"MAINTENANCE","FUSES 0 / 3","Find all three","Return here");
         for(int x:new int[]{-257,-255,-253})set(w,x,88,102,Blocks.POLISHED_BLACKSTONE);
         set(w,-255,84,100,Blocks.IRON_BLOCK);

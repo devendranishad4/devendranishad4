@@ -28,6 +28,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -76,12 +77,14 @@ public class LastElevator {
     private static final int[] AUTO_SECONDS={85,70,85,100,115,100,110,110,110};
 
     public LastElevator(){
+        HudNetwork.register();
         IEventBus bus=FMLJavaModLoadingContext.get().getModEventBus();
         ENTITIES.register(bus);ITEMS.register(bus);SOUNDS.register(bus);bus.addListener(this::attributes);
         MinecraftForge.EVENT_BUS.addListener(this::registerCommands);
         MinecraftForge.EVENT_BUS.addListener(this::tick);
         MinecraftForge.EVENT_BUS.addListener(this::pickup);
         MinecraftForge.EVENT_BUS.addListener(this::click);
+        MinecraftForge.EVENT_BUS.addListener(this::login);
     }
     private void attributes(EntityAttributeCreationEvent e){
         AttributeSupplier.Builder b=net.minecraft.world.entity.monster.Monster.createMonsterAttributes()
@@ -255,6 +258,9 @@ public class LastElevator {
             BlockPos car=BlockPos.of(marker(p,"car").getLong("pos"));
             if(e.getPos().closerThan(car,7))scene(p,d.getInt("scene")+1,false);
         }
+    }
+    private void login(PlayerEvent.PlayerLoggedInEvent e){
+        if(e.getEntity() instanceof ServerPlayer p)HudNetwork.sync(p);
     }
     private void spawn(ServerPlayer p,String name,boolean active){
         if(!marked(p,name)||!safe(p,name))return;

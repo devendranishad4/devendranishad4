@@ -104,7 +104,7 @@ public final class TowerStory {
     private static void scene(ServerPlayer p,int target){
         CompoundTag d=data(p);despawn(p);
         d.putInt("scene",target);d.putInt("elapsed",0);d.putBoolean("sawPassenger",false);
-        say(p,"SCENE "+target+" — "+OBJECTIVES[target]);
+        HudNetwork.sync(p);
         if(target==8)stopAtmosphere(p);
         else if(target!=3)sceneAtmosphere(p,target);
         if(target==2||target==4){
@@ -113,14 +113,14 @@ public final class TowerStory {
             if(!data(p).getBoolean("fuse"+fuse))
                 dropFuse((ServerLevel)p.level(),BlockPos.of(marker.getLong("pos")),fuse);
         }
-        if(target==2){cue(p,LastElevator.BELL.get());say(p,"FLOOR 13. The directory has no floor 13. A guest room has two cups set for one person.");}
+        if(target==2)cue(p,LastElevator.BELL.get());
         if(target==3){TowerLift.door((ServerLevel)p.level(),99,false);
-            cue(p,LastElevator.BELL.get());say(p,"RULE: Do not look at the other passenger after the bell.");}
-        if(target==5){cue(p,LastElevator.BELL.get());say(p,"Bring all three fuses to the panel on floor 6.");}
-        if(target==6){say(p,"The staircase keeps returning to the same landing.");cue(p,LastElevator.KNOCK.get());}
-        if(target==7){TokyoDirector.employee(p);say(p,"FLOOR 0. That is your name on the employee board.");cue(p,LastElevator.STING.get());}
+            cue(p,LastElevator.BELL.get());}
+        if(target==5)cue(p,LastElevator.BELL.get());
+        if(target==6)cue(p,LastElevator.KNOCK.get());
+        if(target==7){TokyoDirector.employee(p);cue(p,LastElevator.STING.get());}
         if(target==8){((ServerLevel)p.level()).setDayTime(1000);TokyoDirector.operator(p);
-            cue(p,LastElevator.BELL.get());say(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());
+            cue(p,LastElevator.BELL.get());
             d.putBoolean("running",false);}
     }
     private static void dropFuse(ServerLevel w,BlockPos pos,int number){
@@ -156,6 +156,7 @@ public final class TowerStory {
         TokyoDirector.seal((ServerLevel)p.level(),true);
         TokyoDirector.electricalDoor((ServerLevel)p.level(),true);
         ((ServerLevel)p.level()).setDayTime(18000);
+        HudNetwork.sync(p);
         say(p,"Recording delay: "+seconds+" seconds. Then enter the lift; it will not move you until you press the button.");
         return 1;
     }
@@ -168,11 +169,11 @@ public final class TowerStory {
         if(number==3&&!d.getBoolean("electricalOpen")){say(p,"The electrical room is still locked.");return 0;}
         d.putBoolean("fuse"+number,true);d.putInt("fuses",d.getInt("fuses")+1);
         cue(p,LastElevator.ELECTRIC.get());
-        if(number==1){say(p,"FUSE 1/3. The printer says: DON'T RETURN WITH TWO PEOPLE.");
+        if(number==1){
             ItemStack paper=new ItemStack(Items.PAPER);paper.setHoverName(Component.literal("DON'T RETURN WITH TWO PEOPLE"));
             p.getInventory().add(paper);}
-        if(number==2){say(p,"FUSE 2/3. A bell rings from the lift. Read the rule beside it.");scene(p,3);}
-        if(number==3){say(p,"FUSE 3/3. The lights die. RUN BACK TO THE LIFT!");
+        if(number==2)scene(p,3);
+        if(number==3){
             ServerLevel w=(ServerLevel)p.level();
             for(int x:new int[]{-263,-255,-247})w.setBlock(new BlockPos(x,90,99),Blocks.REDSTONE_TORCH.defaultBlockState(),2);
             spawn(p,-268,90,100,true);cue(p,LastElevator.RADIO.get());
@@ -193,7 +194,7 @@ public final class TowerStory {
                 d.putBoolean("drawerOpened",true);
                 CompoundTag marker=d.getCompound("marks").getCompound("fuse1");
                 dropFuse((ServerLevel)p.level(),BlockPos.of(marker.getLong("pos")),1);
-                cue(p,LastElevator.DOOR.get());say(p,"The drawer sticks. Inside: the first fuse.");
+                cue(p,LastElevator.DOOR.get());
             }
             return true;
         }
@@ -201,7 +202,7 @@ public final class TowerStory {
             if(!d.getBoolean("breakerKey")){
                 d.putBoolean("breakerKey",true);cue(p,LastElevator.ELECTRIC.get());
                 ItemStack key=new ItemStack(Items.TRIPWIRE_HOOK);key.setHoverName(Component.literal("Electrical room key"));
-                p.getInventory().add(key);say(p,"KEY RELEASED. Unlock the barred room beside the corridor.");
+                p.getInventory().add(key);
             }
             return true;
         }
@@ -210,7 +211,7 @@ public final class TowerStory {
             if(!d.getBoolean("breakerKey")){say(p,"Locked. Find the breaker key first.");return true;}
             TokyoDirector.electricalDoor((ServerLevel)p.level(),false);
             d.putBoolean("electricalOpen",true);cue(p,LastElevator.DOOR.get());
-            say(p,"Electrical room unlocked. Take the third fuse.");return true;
+            return true;
         }
         // Real fuse panel, approached after returning from maintenance.
         if(pos.equals(new BlockPos(-255,85,100))&&stage==5){
@@ -219,13 +220,12 @@ public final class TowerStory {
             TokyoDirector.restorePanel(p);
             for(int i=0;i<p.getInventory().getContainerSize();i++)
                 if(p.getInventory().getItem(i).is(LastElevator.FUSE.get()))p.getInventory().setItem(i,ItemStack.EMPTY);
-            say(p,"POWER RESTORED. ONE PASSENGER MUST REMAIN. The service stairs are east of the lift.");
             spawn(p,-233,85,101,false);return true;
         }
         if((pos.getX()==-273)&&(pos.getY()>=115&&pos.getY()<=117)&&stage==7){
             if(!d.getBoolean("panelRestored")){say(p,"Restore the fuse panel first.");return true;}
             TokyoDirector.seal((ServerLevel)p.level(),false);d.putBoolean("sealOpen",true);
-            cue(p,LastElevator.DOOR.get());say(p,"SEAL BROKEN! Descend the fire stair to the street.");return true;
+            cue(p,LastElevator.DOOR.get());return true;
         }
         // Floor button inside the moving car. Never change floors on a timer.
         int floor=d.getInt("carFloor");
@@ -238,16 +238,16 @@ public final class TowerStory {
                     d.putBoolean("ruleSpawned",true);d.putInt("ruleBell",d.getInt("elapsed"));
                     behind(p,LastElevator.STEPS.get());cue(p,LastElevator.BELL.get());
                     spawn(p,-233,100,101,false);
-                    say(p,"Someone entered behind you. Do not turn. Press the button once more after the bell.");return true;
+                    return true;
                 }
-                if(d.getInt("elapsed")-d.getInt("ruleBell")<45){say(p,"Wait for the other passenger to settle.");return true;}
+                if(d.getInt("elapsed")-d.getInt("ruleBell")<45)return true;
                 target=89;next=4;
             }
             else if(stage==4&&d.getBoolean("fuse3")){target=84;next=5;}
-            else {say(p,OBJECTIVES[stage]);return true;}
+            else {HudNetwork.sync(p);return true;}
             despawn(p);TowerLift.begin(p,d,target,next);
             cue(p,LastElevator.DOOR.get());cue(p,LastElevator.MOTOR.get());
-            say(p,"Doors closing. Riding to the next floor.");return true;
+            HudNetwork.sync(p);return true;
         }
         return false;
     }
@@ -255,11 +255,12 @@ public final class TowerStory {
         CompoundTag d=data(p);if(!d.getBoolean("running")||d.getBoolean("paused"))return;
         if(d.getInt("delay")>0){
             int n=d.getInt("delay")-1;d.putInt("delay",n);
-            if(n==0){say(p,"ACTION. "+OBJECTIVES[0]);cue(p,LastElevator.BELL.get());sceneAtmosphere(p,0);}
+            if(n==0){cue(p,LastElevator.BELL.get());sceneAtmosphere(p,0);HudNetwork.sync(p);}
             return;
         }
         if(d.getBoolean("liftMoving")){
             int arrival=TowerLift.tick(p,d);
+            if(d.getInt("liftTicks")%20==0)HudNetwork.sync(p);
             if(arrival>=0)scene(p,arrival);
             return;
         }
@@ -267,39 +268,38 @@ public final class TowerStory {
         if((t==760||t==1520)&&stage<8
                 &&!(stage==4&&d.getBoolean("fuse3"))
                 &&!(stage==7&&d.getBoolean("zeroSpawn")))sceneAtmosphere(p,stage);
-        if(t%60==1)p.displayClientMessage(Component.literal("OBJECTIVE: "+OBJECTIVES[stage]),true);
+        if(t%20==1)HudNetwork.sync(p);
         if(stage==0&&t==80)behind(p,LastElevator.KNOCK.get());
-        if(stage==1&&t==70){cue(p,LastElevator.BELL.get());say(p,"An empty lift rang behind you.");}
+        if(stage==1&&t==70)cue(p,LastElevator.BELL.get());
         if(stage==2&&t==110)behind(p,LastElevator.KNOCK.get());
         if(stage==2&&!d.getBoolean("hotelSealed")&&t>20&&p.getX()<-237){
             d.putBoolean("hotelSealed",true);
             TowerLift.door((ServerLevel)p.level(),99,true);
             cue(p,LastElevator.DOOR.get());
-            say(p,"The lift closed while you searched the hotel. Find fuse 2 to call it back.");
         }
         if(stage==3&&d.getBoolean("ruleSpawned")&&!d.getBoolean("lookScare")&&d.hasUUID("passengerId")){
             var passenger=((ServerLevel)p.level()).getEntity(d.getUUID("passengerId"));
             if(passenger!=null&&p.distanceToSqr(passenger)<50){
                 var look=passenger.getEyePosition().subtract(p.getEyePosition()).normalize();
                 if(p.getLookAngle().dot(look)>.82&&p.hasLineOfSight(passenger)){
-                    d.putBoolean("lookScare",true);say(p,"YOU LOOKED AT THE OTHER PASSENGER!");
+                    d.putBoolean("lookScare",true);
                     cue(p,LastElevator.STING.get());
                     ((ServerLevel)p.level()).sendParticles(ParticleTypes.SMOKE,passenger.getX(),passenger.getY()+1.5,passenger.getZ(),28,.4,.5,.4,.02);
                 }
             }
         }
-        if(stage==4&&t==40){cue(p,LastElevator.RADIO.get());say(p,"The radio echoes something you said inside the lift...");}
+        if(stage==4&&t==40)cue(p,LastElevator.RADIO.get());
         if(stage==5&&d.getBoolean("panelRestored")&&p.getX()>-239&&p.getZ()>103&&p.getY()<89)scene(p,6);
         if(stage==6){
             if(p.getY()>=94&&!d.getBoolean("loop1")){
                 d.putBoolean("loop1",true);
                 ((ServerLevel)p.level()).setBlock(new BlockPos(-225,101,104),Blocks.AIR.defaultBlockState(),2);
-                cue(p,LastElevator.KNOCK.get());say(p,"The SAME landing again. One lamp has gone out.");
+                cue(p,LastElevator.KNOCK.get());
             }
             if(p.getY()>=104&&!d.getBoolean("loop2")){
                 d.putBoolean("loop2",true);
                 ((ServerLevel)p.level()).setBlock(new BlockPos(-225,106,104),Blocks.AIR.defaultBlockState(),2);
-                cue(p,LastElevator.KNOCK.get());say(p,"The SAME landing again. Another lamp has gone out.");
+                cue(p,LastElevator.KNOCK.get());
             }
             if(p.getY()>=115&&p.getX()<=-226)scene(p,7);
         }
@@ -308,7 +308,6 @@ public final class TowerStory {
             d.putBoolean("zeroSpawn",true);
             spawn(p,p.getX()<=-247?-265:-259,115,100,true);
             atmosphere(p,LastElevator.PURSUIT.get());
-            say(p,"The Passenger is at the far end. Reach the emergency seal!");
         }
         if(stage==7&&d.getBoolean("coldOpen")&&(t==1||t==16||t==31))cue(p,LastElevator.BELL.get());
         if(stage==8)return;
@@ -317,7 +316,7 @@ public final class TowerStory {
         }
     }
     public static int reset(ServerPlayer p){
-        CompoundTag d=data(p);despawn(p);stopAtmosphere(p);
+        CompoundTag d=data(p);despawn(p);stopAtmosphere(p);HudNetwork.clear(p);
         d.putBoolean("running",false);d.putBoolean("paused",false);
         d.putInt("delay",0);d.putInt("scene",0);d.putInt("elapsed",0);
         d.putInt("fuses",0);d.putBoolean("panelRestored",false);d.putBoolean("sealOpen",false);
@@ -357,11 +356,12 @@ public final class TowerStory {
         p.teleportTo((ServerLevel)p.level(),-255.5,115,100.5,90,0);
         spawn(p,-242,115,100,true);
         atmosphere(p,LastElevator.PURSUIT.get());
+        HudNetwork.sync(p);
         say(p,"COLD OPEN: three bells. Run toward the fire exit; cut before the Passenger reaches you.");
         return 1;
     }
     public static int stop(ServerPlayer p){
-        CompoundTag d=data(p);d.putBoolean("running",false);despawn(p);stopAtmosphere(p);
+        CompoundTag d=data(p);d.putBoolean("running",false);despawn(p);stopAtmosphere(p);HudNetwork.clear(p);
         say(p,"Director stopped. /le reset prepares the next take.");return 1;
     }
 }

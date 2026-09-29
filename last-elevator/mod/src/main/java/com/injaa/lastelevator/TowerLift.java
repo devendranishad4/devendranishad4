@@ -124,8 +124,15 @@ public final class TowerLift {
         }
         fill(w,-254,75,103,-251,78,104,Blocks.AIR);
         fill(w,-254,79,103,-251,79,104,Blocks.CUT_COPPER);
+        guides(w);
         // Lobby direction markers are physical lights rather than chat spam.
         for(int x=-249;x<=-240;x+=3)put(w,x,78,100,Blocks.OCHRE_FROGLIGHT);
+    }
+    public static void guides(ServerLevel w){
+        // Continuous inset line: from the lobby spawn, through the arch,
+        // then along the original corridor to the actual cabin doors.
+        for(int z=100;z<=107;z++)put(w,-253,74,z,z%3==0?Blocks.SEA_LANTERN:Blocks.CUT_COPPER);
+        for(int x=-252;x<=-237;x++)put(w,x,74,100,x%3==0?Blocks.SEA_LANTERN:Blocks.CUT_COPPER);
     }
     private static int[][] ring(int minX,int maxX,int minZ,int maxZ){
         int[][] r=new int[16][2];int i=0;

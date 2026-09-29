@@ -1,4 +1,4 @@
-# The Last Elevator — 0.4.3 preview rebuild
+# The Last Elevator — 0.4.4 preview rebuild
 
 Minecraft Java 1.20.1, Forge 47.4.20, Java 17. Use a **copy** of the supplied Tokyo Inspired City 1.0.10 world. The original 0.3.1 prototype was rejected in a real player test: its lift was static, stages visibly teleported the player, fuses were handed out by a timer, and the scares could occur off camera. Do not film the 0.3.1 build.
 
@@ -7,6 +7,8 @@ This source rebuild puts the lobby, floor 6, hotel floor 13, maintenance, stairs
 ## Status
 
 The previous build passed a Forge compile and game-server smoke test for cabin placement, relocation, and shutters. This version adds seven original stereo atmospheres generated during the GitHub build: Tokyo rain, office, hotel, maintenance, stairwell, floor zero, and pursuit. They attach to the player in the Ambience sound category, begin on scene triggers, and stop when a chase or new scene takes over. **No full Minecraft client test or complete recording has passed.** The block preview images are geometry renders using colors from the original map; they are not in-game screenshots. This is still a preview, not a finished video mod.
+
+Objectives now appear in a compact top-right HUD with a direction and distance. The repeating actionbar messages and most scene chat lines were removed. From the installed lobby spawn at X -254 Y 75 Z 107, follow the lit copper floor line north through the arch and east to the actual lift door at X -236 Y 75 Z 100. In an existing 0.4.x Tokyo world, run `/le tokyo` once with the new JAR to add this guide without reinstalling the tower.
 
 Some planned script details need client validation or additional work: a live echo of the creator's own recorded voice, the player-head skin on offline accounts, exterior lobby approach and interior visual polish, Passenger line of sight and pathfinding, and a full timed camera-safe playthrough. The cold open is a separate shot to cut to the beginning. The player's spoken lines are performed during recording.
 
