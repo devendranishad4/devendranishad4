@@ -79,6 +79,10 @@ public final class TokyoDirector {
         w.setBlock(new BlockPos(-255,85,100),Blocks.STONE_BUTTON.defaultBlockState()
                 .setValue(ButtonBlock.FACE,AttachFace.FLOOR),2);
         sign(w,-261,85,102,"DON'T RETURN","WITH TWO","PEOPLE","");
+        // Fuse one is found by opening this drawer in the original furnished
+        // office room north of the corridor, not lying on the hallway floor.
+        set(w,-265,85,94,Blocks.BARREL);
+        sign(w,-265,86,94,"DESK DRAWER","FUSE 1","OPEN HERE","");
         sign(w,-247,100,102,"FLOOR 13","NOT ON THE","DIRECTORY","");
         // Furnished original suite: a second untouched cup is the visual clue.
         set(w,-261,101,108,Blocks.SEA_PICKLE);
@@ -97,7 +101,7 @@ public final class TokyoDirector {
         marker(player,"office",-252,85,100,90);marker(player,"hotel",-267,100,100,90);
         marker(player,"maintenance",-250,90,100,90);marker(player,"stair",-241,105,100,90);
         marker(player,"zero",-250,115,100,90);marker(player,"street",-292,66,100,90);
-        marker(player,"fuse1",-265,85,100,0);marker(player,"fuse2",-256,100,106,0);
+        marker(player,"fuse1",-264,85,94,0);marker(player,"fuse2",-256,100,106,0);
         marker(player,"fuse3",-256,90,106,0);
         marker(player,"passenger_rule",-245,100,100,0);
         marker(player,"passenger_maintenance",-268,90,100,0);

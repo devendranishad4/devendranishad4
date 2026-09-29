@@ -19,7 +19,7 @@ public final class TowerStory {
     private TowerStory(){}
     private static final String[] OBJECTIVES={
             "Enter the lift at the east end of the lobby. Press its button for floor 6.",
-            "Find fuse 1 in the office corridor, then ride to the missing floor.",
+            "Enter the office room north of the corridor. Open the desk drawer for fuse 1.",
             "Find fuse 2 in the hotel corridor. Return to the lift.",
             "After the bell, do not look at the Passenger. Press the lift button again.",
             "Press the breaker for a key, unlock the electrical room, take fuse 3, then run.",
@@ -77,8 +77,8 @@ public final class TowerStory {
         CompoundTag d=data(p);despawn(p);
         d.putInt("scene",target);d.putInt("elapsed",0);d.putBoolean("sawPassenger",false);
         say(p,"SCENE "+target+" — "+OBJECTIVES[target]);
-        if(target==1||target==2||target==4){
-            int fuse=target==1?1:target==2?2:3;
+        if(target==2||target==4){
+            int fuse=target==2?2:3;
             CompoundTag marker=data(p).getCompound("marks").getCompound("fuse"+fuse);
             if(!data(p).getBoolean("fuse"+fuse))
                 dropFuse((ServerLevel)p.level(),BlockPos.of(marker.getLong("pos")),fuse);
@@ -106,8 +106,8 @@ public final class TowerStory {
     public static int setup(ServerPlayer p){
         if(check(p)==0)return 0;
         ServerLevel w=(ServerLevel)p.level();CompoundTag marks=data(p).getCompound("marks");
-        for(int i=1;i<=3;i++)dropFuse(w,BlockPos.of(marks.getCompound("fuse"+i).getLong("pos")),i);
-        say(p,"Three fuses placed on floors 6, 13 and maintenance. Find each one yourself.");return 1;
+        for(int i=2;i<=3;i++)dropFuse(w,BlockPos.of(marks.getCompound("fuse"+i).getLong("pos")),i);
+        say(p,"The office drawer hides fuse 1. Fuses 2 and 3 are placed on floors 13 and maintenance.");return 1;
     }
     public static int start(ServerPlayer p,int seconds,boolean auto){
         if(seconds!=10&&seconds!=15&&seconds!=20){say(p,"Choose a 10, 15 or 20 second delay.");return 0;}
@@ -119,6 +119,7 @@ public final class TowerStory {
         d.putBoolean("ruleSpawned",false);d.putBoolean("lookScare",false);
         d.putBoolean("zeroSpawn",false);
         d.putBoolean("hotelSealed",false);
+        d.putBoolean("drawerOpened",false);
         d.putBoolean("breakerKey",false);d.putBoolean("electricalOpen",false);
         d.putBoolean("coldOpen",false);
         d.putBoolean("loop1",false);d.putBoolean("loop2",false);
@@ -134,6 +135,7 @@ public final class TowerStory {
         if(number<1||number>3||d.getBoolean("fuse"+number))return 0;
         int stage=d.getInt("scene");
         if((number==1&&stage!=1)||(number==2&&stage!=2)||(number==3&&stage!=4))return 0;
+        if(number==1&&!d.getBoolean("drawerOpened"))return 0;
         if(number==3&&!d.getBoolean("electricalOpen")){say(p,"The electrical room is still locked.");return 0;}
         d.putBoolean("fuse"+number,true);d.putInt("fuses",d.getInt("fuses")+1);
         cue(p,LastElevator.ELECTRIC.get());
@@ -156,6 +158,15 @@ public final class TowerStory {
         CompoundTag d=data(p);if(!d.getBoolean("running")||d.getBoolean("paused")||d.getInt("delay")>0)return false;
         if(d.getBoolean("liftMoving"))return true;
         int stage=d.getInt("scene");
+        if(pos.equals(new BlockPos(-265,85,94))&&stage==1){
+            if(!d.getBoolean("drawerOpened")){
+                d.putBoolean("drawerOpened",true);
+                CompoundTag marker=d.getCompound("marks").getCompound("fuse1");
+                dropFuse((ServerLevel)p.level(),BlockPos.of(marker.getLong("pos")),1);
+                cue(p,LastElevator.DOOR.get());say(p,"The drawer sticks. Inside: the first fuse.");
+            }
+            return true;
+        }
         if(pos.equals(new BlockPos(-251,90,101))&&stage==4){
             if(!d.getBoolean("breakerKey")){
                 d.putBoolean("breakerKey",true);cue(p,LastElevator.ELECTRIC.get());
@@ -279,6 +290,7 @@ public final class TowerStory {
         d.putBoolean("coldOpen",false);
         d.putBoolean("zeroSpawn",false);
         d.putBoolean("breakerKey",false);d.putBoolean("electricalOpen",false);
+        d.putBoolean("drawerOpened",false);
         for(int i=1;i<=3;i++)d.putBoolean("fuse"+i,false);
         TowerLift.reset(p,d);TokyoDirector.seal((ServerLevel)p.level(),true);
         TokyoDirector.electricalDoor((ServerLevel)p.level(),true);

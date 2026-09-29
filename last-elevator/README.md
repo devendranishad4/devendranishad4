@@ -2,7 +2,7 @@
 
 Minecraft Java 1.20.1, Forge 47.4.20, Java 17. Use a **copy** of the supplied Tokyo Inspired City 1.0.10 world. The original 0.3.1 prototype was rejected in a real player test: its lift was static, stages visibly teleported the player, fuses were handed out by a timer, and the scares could occur off camera. Do not film the 0.3.1 build.
 
-This source rebuild puts the lobby, floor 6, hotel floor 13, maintenance, stairs, floor 0 and exit in one existing Tokyo tower. It cuts a vertical shaft through nine original floor levels; a decorated cabin travels one block at a time between landings with shutters closing and opening. The player must press the cabin button. The three fuses are physical pickups. The electrical-room key, fuse panel, service stairs, emergency seal and fire stair are interacted with in sequence. The Passenger appears in the car, chases at maintenance, and reveals itself on floor 0. A separate cold open is recorded after the ending.
+This source rebuild puts the lobby, floor 6, hotel floor 13, maintenance, stairs, floor 0 and exit in one existing Tokyo tower. It cuts a vertical shaft through nine original floor levels; a decorated cabin travels one block at a time between landings with shutters closing and opening. The player must press the cabin button. Fuse 1 is revealed by opening a desk drawer inside the original office room; the other two are physical pickups. The electrical-room key, fuse panel, service stairs, emergency seal and fire stair are interacted with in sequence. The Passenger appears in the car, chases at maintenance, and reveals itself on floor 0. A separate cold open is recorded after the ending.
 
 ## Status
 
