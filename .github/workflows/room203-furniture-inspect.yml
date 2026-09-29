@@ -18,7 +18,7 @@ jobs:
           curl -fsSL "$url" -o furniture.jar
           unzip -Z1 furniture.jar | sed -n 's@^assets/mcwfurnitures/blockstates/\(.*\)\.json$@\1@p' | sort -u > furniture-blocks.txt
           wc -l furniture-blocks.txt
-          cat furniture-blocks.txt | grep -E 'chair|sofa|desk|sink|wardrobe|cabinet|table|couch|stool' | head -120
+          grep -E 'chair|sofa|desk|sink|wardrobe|cabinet|table|couch|stool' furniture-blocks.txt | sed -n '1,120p'
       - uses: actions/upload-artifact@v4
         with:
           name: furniture-block-ids
