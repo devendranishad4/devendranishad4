@@ -3,7 +3,7 @@ loaderVersion="[47,)"
 license="MIT"
 [[mods]]
 modId="lastelevator"
-version="0.3.1"
+version="0.4.0-preview"
 displayName="The Last Elevator Director"
 description="Single-player recording director for The Last Elevator horror story."
 [[dependencies.lastelevator]]

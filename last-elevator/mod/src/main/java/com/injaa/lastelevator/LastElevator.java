@@ -120,12 +120,14 @@ public class LastElevator {
         p.teleportTo((ServerLevel)p.level(),at.getX()+.5,at.getY(),at.getZ()+.5,v.getFloat("yaw"),p.getXRot());
     }
     private static int check(ServerPlayer p){
+        if(state(p).getInt("towerVersion")>=4)return TowerStory.check(p);
         int missing=0;
         for(String marker:MARKERS)if(!marked(p,marker)){msg(p,"Missing: "+marker);missing++;}
         if(missing==0){for(String marker:SCENES) safe(p,marker);msg(p,"All markers present. Check each room and exit before filming.");}
         return missing==0?1:0;
     }
     private static int start(ServerPlayer p,int seconds){
+        if(state(p).getInt("towerVersion")>=4)return TowerStory.start(p,seconds,false);
         if(seconds!=10&&seconds!=15&&seconds!=20){msg(p,"Choose 10, 15 or 20 seconds.");return 0;}
         if(check(p)==0)return 0;
         CompoundTag d=state(p);d.putBoolean("running",true);d.putBoolean("paused",false);
@@ -137,6 +139,7 @@ public class LastElevator {
         cleanup(p);msg(p,"Recording delay: "+seconds+" seconds. Close chat and start filming.");return 1;
     }
     private static int scene(ServerPlayer p,int target,boolean bypass){
+        if(state(p).getInt("towerVersion")>=4)return TowerStory.skip(p,target);
         CompoundTag d=state(p);
         if(!d.getBoolean("running")){msg(p,"Use /le start first.");return 0;}
         if(d.getInt("delay")>0){msg(p,"Wait for the countdown.");return 0;}
@@ -159,6 +162,7 @@ public class LastElevator {
         }
     }
     private static int reset(ServerPlayer p){
+        if(state(p).getInt("towerVersion")>=4)return TowerStory.reset(p);
         CompoundTag d=state(p);cleanup(p);d.putBoolean("running",false);d.putBoolean("paused",false);
         if(d.getBoolean("built")){
             BlockPos origin=BlockPos.of(d.getLong("builtOrigin"));
@@ -175,6 +179,7 @@ public class LastElevator {
         msg(p,"Story reset. Your markers remain saved.");return 1;
     }
     private static int giveFuse(ServerPlayer p,int number){
+        if(state(p).getInt("towerVersion")>=4)return TowerStory.fuse(p,number);
         if(number<1||number>3)return 0;
         CompoundTag d=state(p);String flag="fuse"+number;
         if(d.getBoolean(flag)){msg(p,"Fuse "+number+" already collected.");return 0;}
@@ -182,6 +187,7 @@ public class LastElevator {
         msg(p,"Fuse "+number+"/3 collected.");sound(p,SoundEvents.LEVER_CLICK,1.0f);return 1;
     }
     private static int setup(ServerPlayer p){
+        if(state(p).getInt("towerVersion")>=4)return TowerStory.setup(p);
         if(check(p)==0)return 0;
         ServerLevel w=(ServerLevel)p.level();
         for(int i=1;i<=3;i++){
@@ -202,7 +208,8 @@ public class LastElevator {
         root.then(marks);
         root.then(Commands.literal("check").executes(c->check(c.getSource().getPlayerOrException())));
         root.then(Commands.literal("build").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();String result=SceneBuilder.build(p);msg(p,result);return result.startsWith("Placed")?1:0;}));
-        root.then(Commands.literal("tokyo").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();String result=TokyoDirector.install(p);msg(p,result);return result.startsWith("Tokyo city story installed")?1:0;}));
+        root.then(Commands.literal("tokyo").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();String result=TokyoDirector.install(p);msg(p,result);return result.startsWith("Tower with")?1:0;}));
+        root.then(Commands.literal("coldopen").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();return state(p).getInt("towerVersion")>=4?TowerStory.coldOpen(p):0;}));
         root.then(Commands.literal("setup").executes(c->setup(c.getSource().getPlayerOrException())));
         root.then(Commands.literal("start").executes(c->start(c.getSource().getPlayerOrException(),20))
                 .then(Commands.argument("seconds",IntegerArgumentType.integer(10,20))
@@ -218,18 +225,24 @@ public class LastElevator {
         root.then(fuse);
         root.then(Commands.literal("pause").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();state(p).putBoolean("paused",true);msg(p,"Paused.");return 1;}));
         root.then(Commands.literal("resume").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();state(p).putBoolean("paused",false);msg(p,"Resumed.");return 1;}));
-        root.then(Commands.literal("stop").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();state(p).putBoolean("running",false);cleanup(p);msg(p,"Stopped.");return 1;}));
+        root.then(Commands.literal("stop").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();if(state(p).getInt("towerVersion")>=4)return TowerStory.stop(p);state(p).putBoolean("running",false);cleanup(p);msg(p,"Stopped.");return 1;}));
         root.then(Commands.literal("reset").executes(c->reset(c.getSource().getPlayerOrException())));
         d.register(root);
     }
     private void pickup(EntityItemPickupEvent e){
         if(!(e.getEntity() instanceof ServerPlayer p)||!e.getItem().getItem().is(FUSE.get()))return;
+        if(state(p).getInt("towerVersion")>=4){TowerStory.pickup(p,e.getItem().getItem());return;}
         int number=e.getItem().getItem().getTag()==null?0:e.getItem().getItem().getTag().getInt("FuseNumber");
         if(number>0)giveFuse(p,number);
     }
     private void click(PlayerInteractEvent.RightClickBlock e){
         if(e.getHand()!=net.minecraft.world.InteractionHand.MAIN_HAND
-                ||!(e.getEntity() instanceof ServerPlayer p)||!p.level().getBlockState(e.getPos()).is(Blocks.STONE_BUTTON))return;
+                ||!(e.getEntity() instanceof ServerPlayer p))return;
+        if(state(p).getInt("towerVersion")>=4){
+            if(TowerStory.click(p,e.getPos()))e.setCanceled(true);
+            return;
+        }
+        if(!p.level().getBlockState(e.getPos()).is(Blocks.STONE_BUTTON))return;
         CompoundTag d=state(p);if(!d.getBoolean("running")||d.getBoolean("paused")||d.getInt("delay")>0)return;
         if(marked(p,"car")){
             BlockPos car=BlockPos.of(marker(p,"car").getLong("pos"));
@@ -247,12 +260,14 @@ public class LastElevator {
         sound(p,STING.get(),.95f);
     }
     private static int auto(ServerPlayer p,int seconds){
+        if(state(p).getInt("towerVersion")>=4)return TowerStory.start(p,seconds,true);
         int result=start(p,seconds);
         if(result==1){state(p).putBoolean("auto",true);msg(p,"AUTO mode armed: all nine scenes will advance on schedule. /le pause stops the clock.");}
         return result;
     }
     private void tick(TickEvent.PlayerTickEvent e){
         if(e.phase!=TickEvent.Phase.END||!(e.player instanceof ServerPlayer p))return;
+        if(state(p).getInt("towerVersion")>=4){TowerStory.tick(p);return;}
         CompoundTag d=state(p);if(!d.getBoolean("running")||d.getBoolean("paused"))return;
         int delay=d.getInt("delay");
         if(delay>0){
