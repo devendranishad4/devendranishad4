@@ -58,6 +58,13 @@ public class LastElevator {
     public static final RegistryObject<SoundEvent> RADIO=registerSound("broken_radio");
     public static final RegistryObject<SoundEvent> KNOCK=registerSound("distant_knock");
     public static final RegistryObject<SoundEvent> ELECTRIC=registerSound("electrical_fault");
+    public static final RegistryObject<SoundEvent> TOKYO_RAIN=registerSound("tokyo_rain_lobby");
+    public static final RegistryObject<SoundEvent> OFFICE_NIGHT=registerSound("office_after_hours");
+    public static final RegistryObject<SoundEvent> HOTEL_HALL=registerSound("hotel_thirteen_hall");
+    public static final RegistryObject<SoundEvent> MAINTENANCE_ROOM=registerSound("maintenance_power_room");
+    public static final RegistryObject<SoundEvent> STAIRWELL=registerSound("stairwell_repeating");
+    public static final RegistryObject<SoundEvent> FLOOR_ZERO=registerSound("floor_zero_void");
+    public static final RegistryObject<SoundEvent> PURSUIT=registerSound("passenger_pursuit");
     private static RegistryObject<SoundEvent> registerSound(String name){
         return SOUNDS.register(name,()->SoundEvent.createVariableRangeEvent(new ResourceLocation(ID,name)));
     }

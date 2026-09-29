@@ -1,9 +1,13 @@
 package com.injaa.lastelevator;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -32,6 +36,30 @@ public final class TowerStory {
     private static void say(ServerPlayer p,String value){p.sendSystemMessage(Component.literal("[Last Elevator] "+value));}
     private static void cue(ServerPlayer p,SoundEvent event){
         p.level().playSound(null,p.blockPosition(),event,SoundSource.BLOCKS,.95f,1f);
+    }
+    private static void atmosphere(ServerPlayer p,SoundEvent event){
+        // Follow the recording player so the room tone does not vanish as they
+        // walk down a long corridor. It remains on the Ambience volume slider.
+        stopAtmosphere(p);
+        p.connection.send(new ClientboundSoundEntityPacket(Holder.direct(event),
+                SoundSource.AMBIENT,p,.48f,1f,p.level().getRandom().nextLong()));
+        data(p).putString("playingAtmosphere",event.getLocation().toString());
+    }
+    private static void stopAtmosphere(ServerPlayer p){
+        CompoundTag d=data(p);
+        if(d.contains("playingAtmosphere")){
+            p.connection.send(new ClientboundStopSoundPacket(new ResourceLocation(
+                    d.getString("playingAtmosphere")),SoundSource.AMBIENT));
+            d.remove("playingAtmosphere");
+        }
+    }
+    private static void sceneAtmosphere(ServerPlayer p,int stage){
+        if(stage==0)atmosphere(p,LastElevator.TOKYO_RAIN.get());
+        if(stage==1||stage==5)atmosphere(p,LastElevator.OFFICE_NIGHT.get());
+        if(stage==2||stage==3)atmosphere(p,LastElevator.HOTEL_HALL.get());
+        if(stage==4)atmosphere(p,LastElevator.MAINTENANCE_ROOM.get());
+        if(stage==6)atmosphere(p,LastElevator.STAIRWELL.get());
+        if(stage==7)atmosphere(p,LastElevator.FLOOR_ZERO.get());
     }
     private static void behind(ServerPlayer p,SoundEvent event){
         var v=p.getLookAngle();
@@ -77,6 +105,8 @@ public final class TowerStory {
         CompoundTag d=data(p);despawn(p);
         d.putInt("scene",target);d.putInt("elapsed",0);d.putBoolean("sawPassenger",false);
         say(p,"SCENE "+target+" — "+OBJECTIVES[target]);
+        if(target==8)stopAtmosphere(p);
+        else if(target!=3)sceneAtmosphere(p,target);
         if(target==2||target==4){
             int fuse=target==2?2:3;
             CompoundTag marker=data(p).getCompound("marks").getCompound("fuse"+fuse);
@@ -86,7 +116,6 @@ public final class TowerStory {
         if(target==2){cue(p,LastElevator.BELL.get());say(p,"FLOOR 13. The directory has no floor 13. A guest room has two cups set for one person.");}
         if(target==3){TowerLift.door((ServerLevel)p.level(),99,false);
             cue(p,LastElevator.BELL.get());say(p,"RULE: Do not look at the other passenger after the bell.");}
-        if(target==4)cue(p,LastElevator.AMBIENCE.get());
         if(target==5){cue(p,LastElevator.BELL.get());say(p,"Bring all three fuses to the panel on floor 6.");}
         if(target==6){say(p,"The staircase keeps returning to the same landing.");cue(p,LastElevator.KNOCK.get());}
         if(target==7){TokyoDirector.employee(p);say(p,"FLOOR 0. That is your name on the employee board.");cue(p,LastElevator.STING.get());}
@@ -112,7 +141,7 @@ public final class TowerStory {
     public static int start(ServerPlayer p,int seconds,boolean auto){
         if(seconds!=10&&seconds!=15&&seconds!=20){say(p,"Choose a 10, 15 or 20 second delay.");return 0;}
         if(check(p)==0)return 0;
-        CompoundTag d=data(p);despawn(p);
+        CompoundTag d=data(p);despawn(p);stopAtmosphere(p);
         d.putBoolean("running",true);d.putBoolean("paused",false);d.putBoolean("auto",auto);
         d.putInt("delay",seconds*20);d.putInt("elapsed",0);d.putInt("scene",0);
         d.putInt("fuses",0);d.putBoolean("panelRestored",false);d.putBoolean("sealOpen",false);
@@ -146,7 +175,8 @@ public final class TowerStory {
         if(number==3){say(p,"FUSE 3/3. The lights die. RUN BACK TO THE LIFT!");
             ServerLevel w=(ServerLevel)p.level();
             for(int x:new int[]{-263,-255,-247})w.setBlock(new BlockPos(x,90,99),Blocks.REDSTONE_TORCH.defaultBlockState(),2);
-            spawn(p,-268,90,100,true);cue(p,LastElevator.RADIO.get());}
+            spawn(p,-268,90,100,true);cue(p,LastElevator.RADIO.get());
+            atmosphere(p,LastElevator.PURSUIT.get());}
         return 1;
     }
     public static boolean pickup(ServerPlayer p,ItemStack item){
@@ -225,7 +255,7 @@ public final class TowerStory {
         CompoundTag d=data(p);if(!d.getBoolean("running")||d.getBoolean("paused"))return;
         if(d.getInt("delay")>0){
             int n=d.getInt("delay")-1;d.putInt("delay",n);
-            if(n==0){say(p,"ACTION. "+OBJECTIVES[0]);cue(p,LastElevator.BELL.get());}
+            if(n==0){say(p,"ACTION. "+OBJECTIVES[0]);cue(p,LastElevator.BELL.get());sceneAtmosphere(p,0);}
             return;
         }
         if(d.getBoolean("liftMoving")){
@@ -234,6 +264,9 @@ public final class TowerStory {
             return;
         }
         int stage=d.getInt("scene"),t=d.getInt("elapsed")+1;d.putInt("elapsed",t);
+        if((t==760||t==1520)&&stage<8
+                &&!(stage==4&&d.getBoolean("fuse3"))
+                &&!(stage==7&&d.getBoolean("zeroSpawn")))sceneAtmosphere(p,stage);
         if(t%60==1)p.displayClientMessage(Component.literal("OBJECTIVE: "+OBJECTIVES[stage]),true);
         if(stage==0&&t==80)behind(p,LastElevator.KNOCK.get());
         if(stage==1&&t==70){cue(p,LastElevator.BELL.get());say(p,"An empty lift rang behind you.");}
@@ -274,6 +307,7 @@ public final class TowerStory {
                 &&(t>=60||p.getX()<=-247)){
             d.putBoolean("zeroSpawn",true);
             spawn(p,p.getX()<=-247?-265:-259,115,100,true);
+            atmosphere(p,LastElevator.PURSUIT.get());
             say(p,"The Passenger is at the far end. Reach the emergency seal!");
         }
         if(stage==7&&d.getBoolean("coldOpen")&&(t==1||t==16||t==31))cue(p,LastElevator.BELL.get());
@@ -283,7 +317,8 @@ public final class TowerStory {
         }
     }
     public static int reset(ServerPlayer p){
-        CompoundTag d=data(p);despawn(p);d.putBoolean("running",false);d.putBoolean("paused",false);
+        CompoundTag d=data(p);despawn(p);stopAtmosphere(p);
+        d.putBoolean("running",false);d.putBoolean("paused",false);
         d.putInt("delay",0);d.putInt("scene",0);d.putInt("elapsed",0);
         d.putInt("fuses",0);d.putBoolean("panelRestored",false);d.putBoolean("sealOpen",false);
         d.putBoolean("loop1",false);d.putBoolean("loop2",false);
@@ -314,18 +349,19 @@ public final class TowerStory {
     }
     public static int coldOpen(ServerPlayer p){
         if(check(p)==0)return 0;
-        CompoundTag d=data(p);despawn(p);
+        CompoundTag d=data(p);despawn(p);stopAtmosphere(p);
         TowerLift.position((ServerLevel)p.level(),d,114);
         TokyoDirector.seal((ServerLevel)p.level(),false);
         d.putBoolean("running",true);d.putBoolean("paused",false);d.putBoolean("coldOpen",true);
         d.putBoolean("sealOpen",true);d.putInt("delay",0);d.putInt("scene",7);d.putInt("elapsed",0);
         p.teleportTo((ServerLevel)p.level(),-255.5,115,100.5,90,0);
         spawn(p,-242,115,100,true);
+        atmosphere(p,LastElevator.PURSUIT.get());
         say(p,"COLD OPEN: three bells. Run toward the fire exit; cut before the Passenger reaches you.");
         return 1;
     }
     public static int stop(ServerPlayer p){
-        CompoundTag d=data(p);d.putBoolean("running",false);despawn(p);
+        CompoundTag d=data(p);d.putBoolean("running",false);despawn(p);stopAtmosphere(p);
         say(p,"Director stopped. /le reset prepares the next take.");return 1;
     }
 }
