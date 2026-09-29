@@ -1,0 +1,25 @@
+name: Inspect 1.20.1 furniture registry
+on:
+  push:
+    branches: [codex/room203-town]
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch official Modrinth Forge file and list block states
+        run: |
+          set -euo pipefail
+          curl -fsSL -G 'https://api.modrinth.com/v2/project/macaws-furniture/version' \
+            --data-urlencode 'loaders=["forge"]' \
+            --data-urlencode 'game_versions=["1.20.1"]' -o versions.json
+          jq -r '[.[] | {id,version_number,files:[.files[] | {url,filename}]}] | .[:5]' versions.json
+          url=$(jq -r '[.[] | select(.version_number=="3.4.1") | .files[] | select(.primary==true) | .url][0]' versions.json)
+          test "$url" != null
+          curl -fsSL "$url" -o furniture.jar
+          unzip -Z1 furniture.jar | sed -n 's@^assets/mcwfurnitures/blockstates/\(.*\)\.json$@\1@p' | sort -u > furniture-blocks.txt
+          wc -l furniture-blocks.txt
+          cat furniture-blocks.txt | grep -E 'chair|sofa|desk|sink|wardrobe|cabinet|table|couch|stool' | head -120
+      - uses: actions/upload-artifact@v4
+        with:
+          name: furniture-block-ids
+          path: furniture-blocks.txt
