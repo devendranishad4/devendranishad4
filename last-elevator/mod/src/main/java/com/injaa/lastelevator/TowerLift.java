@@ -205,7 +205,7 @@ public final class TowerLift {
         w.setBlock(new BlockPos(-233,floor+1,100),Blocks.STONE_BUTTON.defaultBlockState()
                 .setValue(ButtonBlock.FACE,AttachFace.FLOOR),2);
     }
-    private static void door(ServerLevel w,int floor,boolean closed){
+    public static void door(ServerLevel w,int floor,boolean closed){
         for(int y=floor+1;y<=floor+3;y++)for(int z=100;z<=101;z++){
             put(w,-236,y,z,closed?Blocks.IRON_BLOCK:Blocks.AIR);
             put(w,X0,y,z,closed?Blocks.IRON_BLOCK:Blocks.AIR);
@@ -243,8 +243,8 @@ public final class TowerLift {
             p.teleportTo(w,p.getX(),p.getY()+(next-floor),p.getZ(),p.getYRot(),p.getXRot());
             p.setDeltaMovement(0,0,0);p.fallDistance=0;
             d.putInt("carFloor",next);
-            if(next%5==4)p.displayClientMessage(net.minecraft.network.chat.Component.literal(
-                    "LIFT FLOOR "+((next-74)/5)),true);
+            if(next==target)p.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    "LIFT FLOOR "+(target==84?"6":target==99?"13":target==89?"M":target==114?"0":"L")),true);
             if(next==target)d.putInt("arrivalTick",ticks);
             return -1;
         }

@@ -84,7 +84,8 @@ public final class TowerStory {
                 dropFuse((ServerLevel)p.level(),BlockPos.of(marker.getLong("pos")),fuse);
         }
         if(target==2){cue(p,LastElevator.BELL.get());say(p,"FLOOR 13. The directory has no floor 13. A guest room has two cups set for one person.");}
-        if(target==3){cue(p,LastElevator.BELL.get());say(p,"RULE: Do not look at the other passenger after the bell.");}
+        if(target==3){TowerLift.door((ServerLevel)p.level(),99,false);
+            cue(p,LastElevator.BELL.get());say(p,"RULE: Do not look at the other passenger after the bell.");}
         if(target==4)cue(p,LastElevator.AMBIENCE.get());
         if(target==5){cue(p,LastElevator.BELL.get());say(p,"Bring all three fuses to the panel on floor 6.");}
         if(target==6){say(p,"The staircase keeps returning to the same landing.");cue(p,LastElevator.KNOCK.get());}
@@ -117,6 +118,7 @@ public final class TowerStory {
         d.putInt("fuses",0);d.putBoolean("panelRestored",false);d.putBoolean("sealOpen",false);
         d.putBoolean("ruleSpawned",false);d.putBoolean("lookScare",false);
         d.putBoolean("zeroSpawn",false);
+        d.putBoolean("hotelSealed",false);
         d.putBoolean("breakerKey",false);d.putBoolean("electricalOpen",false);
         d.putBoolean("coldOpen",false);
         d.putBoolean("loop1",false);d.putBoolean("loop2",false);
@@ -225,6 +227,12 @@ public final class TowerStory {
         if(stage==0&&t==80)behind(p,LastElevator.KNOCK.get());
         if(stage==1&&t==70){cue(p,LastElevator.BELL.get());say(p,"An empty lift rang behind you.");}
         if(stage==2&&t==110)behind(p,LastElevator.KNOCK.get());
+        if(stage==2&&!d.getBoolean("hotelSealed")&&t>20&&p.getX()<-237){
+            d.putBoolean("hotelSealed",true);
+            TowerLift.door((ServerLevel)p.level(),99,true);
+            cue(p,LastElevator.DOOR.get());
+            say(p,"The lift closed while you searched the hotel. Find fuse 2 to call it back.");
+        }
         if(stage==3&&d.getBoolean("ruleSpawned")&&!d.getBoolean("lookScare")&&d.hasUUID("passengerId")){
             var passenger=((ServerLevel)p.level()).getEntity(d.getUUID("passengerId"));
             if(passenger!=null&&p.distanceToSqr(passenger)<50){
