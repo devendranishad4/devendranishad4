@@ -21,7 +21,7 @@ from nbtlib import Byte, Compound, Double, File, Float, Int, List, Long, LongArr
 ROOT = Path(__file__).resolve().parent
 SOURCE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT.parent / 'world/Tokyo Inspired City 1.0.10'
 MODDED = os.environ.get('ROOM203_MACAW', '0') == '1'
-NAME = 'Room203_Tokyo_4km_Macaw_1.20.1_v4' if MODDED else 'Room203_Tokyo_4km_1.20.1_v4'
+NAME = 'Room203_Tokyo_4km_Macaw_1.20.1_v6' if MODDED else 'Room203_Tokyo_4km_1.20.1_v6'
 DEST = ROOT / NAME
 ORIGIN_X, ORIGIN_Y, ORIGIN_Z = -700, 62, -350
 
