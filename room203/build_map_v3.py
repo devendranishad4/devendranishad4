@@ -457,6 +457,150 @@ for z in (20,88,156,240,322):
         for xx in range(x-6,x+7,3):
             fill(xx,0,z-1,xx+1,0,z+1,'white_concrete')
 
+# Furnish the hero apartment as small, legible homes rather than one long hall.
+# Room 203 uses the same practical layout with a warmer palette; 204 remains
+# abandoned, but its covered furniture shows it used to be a home.
+def complete_unit(f,j):
+    base=f*6;z=30+j*7
+    special=(f==1 and j==2)
+    vacant=(f==1 and j==3)
+    fill(60,base+1,z-1,83,base+4,z+4,AIR)
+    floor='spruce_planks' if special else ('dark_oak_planks' if (j+f)%3==0 else 'birch_planks')
+    fill(60,base,z-1,83,base,z+4,floor)
+    fill(60,base,z-1,62,base,z+4,'polished_deepslate') # genkan
+    fill(62,base+1,z+3,64,base+1,z+3,'dark_oak_slab[type=bottom,waterlogged=false]')
+    put(61,base+1,z+4,'barrel') # shoes and umbrella
+    # Kitchen: lower cabinets, overhead storage, sink, hob and refrigerator.
+    fill(64,base+1,z-1,70,base+1,z-1,'smooth_quartz')
+    fill(64,base+3,z-1,68,base+3,z-1,'dark_oak_trapdoor[facing=north,half=top,open=false,powered=false,waterlogged=false]')
+    put(65,base+1,z-1,'water_cauldron[level=3]')
+    put(68,base+1,z-1,'smoker[facing=south,lit=false]')
+    fill(64,base+1,z+4,65,base+2,z+4,'iron_block')
+    fill(67,base+1,z+2,69,base+1,z+2,'spruce_slab[type=bottom,waterlogged=false]')
+    put(68,base+1,z+3,'dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]')
+    # Half-height entry screen creates a turn into the living room.
+    fill(70,base+1,z-1,70,base+2,z,'stripped_dark_oak_log')
+    fill(70,base+1,z+3,70,base+2,z+4,'stripped_dark_oak_log')
+    fill(71,base+1,z+1,74,base+1,z+1,'light_gray_carpet')
+    fill(72,base+1,z+3,74,base+1,z+3,'dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]')
+    fill(72,base+1,z+2,73,base+1,z+2,'spruce_slab[type=bottom,waterlogged=false]')
+    fill(75,base+1,z-1,76,base+2,z-1,'black_concrete') # TV
+    fill(75,base+1,z,76,base+1,z,'polished_deepslate_slab[type=bottom,waterlogged=false]')
+    # Frosted bedroom partition with a two-block opening at z+1, z+2.
+    fill(77,base+1,z-1,77,base+3,z,'white_stained_glass')
+    fill(77,base+1,z+3,77,base+3,z+4,'white_stained_glass')
+    fill(77,base+4,z-1,77,base+4,z+4,'dark_oak_planks')
+    put(80,base+1,z+2,'white_bed[facing=south,part=foot,occupied=false]')
+    put(80,base+1,z+3,'white_bed[facing=south,part=head,occupied=false]')
+    fill(82,base+1,z-1,83,base+2,z-1,'barrel')
+    put(81,base+1,z-1,'bookshelf')
+    fill(79,base+1,z-1,80,base+1,z-1,'spruce_slab[type=bottom,waterlogged=false]')
+    put(81,base+1,z+4,'flower_pot')
+    # Ceiling cove and bedside lamp avoid the flat, unlit slab look.
+    fill(62,base+4,z-1,75,base+4,z-1,'spruce_trapdoor[facing=north,half=top,open=false,powered=false,waterlogged=false]')
+    put(72,base+4,z+2,'ochre_froglight' if special else 'sea_lantern')
+    put(82,base+3,z+3,'lantern[hanging=true,waterlogged=false]')
+    if special:
+        fill(78,base+1,z+4,81,base+1,z+4,'white_carpet')
+        fill(60,base+2,z+3,60,base+3,z+4,'orange_stained_glass')
+    if vacant:
+        # 204 is deliberately cold and neglected, rather than an empty shell.
+        fill(71,base+1,z+1,74,base+1,z+3,'gray_carpet')
+        fill(72,base+1,z+3,74,base+1,z+3,'white_wool')
+        put(72,base+4,z+2,'redstone_lamp[lit=false]')
+        fill(82,base+1,z+3,83,base+2,z+3,'barrel')
+    if MODDED:
+        furniture(73,base+1,z+3,'gray_couch')
+        furniture(72,base+1,z+2,'dark_oak_coffee_table')
+        furniture(69,base+1,z-1,'dark_oak_kitchen_cabinet')
+        furniture(66,base+1,z-1,'dark_oak_kitchen_sink')
+        furniture(83,base+1,z+2,'dark_oak_modern_wardrobe')
+        furniture(79,base+1,z-1,'dark_oak_modern_desk')
+
+for floor_index in range(4):
+    for unit_index in range(6):complete_unit(floor_index,unit_index)
+
+def renovate_society(x,z,w,d,floors):
+    """A lobby, two occupied ground shops and two homes on each upper floor."""
+    x1,z1=x+w-1,z+d-1
+    cx=x+w//2
+    for f in range(floors):
+        y=f*5
+        # Clear old props inside the existing facade and retain outside walls.
+        fill(x+1,y+1,z+1,x1-1,y+4,z1-1,AIR)
+        fill(x+1,y,z+1,x1-1,y,z1-1,
+             'polished_andesite' if f==0 else 'spruce_planks')
+        # Central shared corridor, wall trim and two real apartment/shop doors.
+        fill(cx-4,y+1,z+2,cx-4,y+4,z1-2,'light_gray_concrete')
+        fill(cx+4,y+1,z+2,cx+4,y+4,z1-2,'light_gray_concrete')
+        for side,facing in ((cx-4,'east'),(cx+4,'west')):
+            fill(side,y+1,z1-5,side,y+2,z1-5,AIR)
+            put(side,y+1,z1-5,f'dark_oak_door[facing={facing},half=lower,hinge=left,open=false,powered=false]')
+            put(side,y+2,z1-5,f'dark_oak_door[facing={facing},half=upper,hinge=left,open=false,powered=false]')
+        fill(cx-3,y,z+2,cx+3,y,z1-2,'polished_diorite' if f==0 else 'spruce_planks')
+        for zz in range(z+5,z1-2,6):put(cx+2,y+4,zz,'sea_lantern')
+        for zz in range(z+12,z1-3,7):
+            fill(cx-3,y+1,zz,cx-3,y+1,zz+2,'dark_oak_planks')
+            fill(cx+3,y+1,zz,cx+3,y+1,zz+2,'dark_oak_planks')
+        if f==0:
+            fill(cx-3,1,z1-4,cx-3,2,z1-2,'barrel') # lobby mailboxes
+            fill(cx+3,2,z1-4,cx+3,3,z1-3,'orange_stained_glass') # notice
+            fill(cx-2,1,z1-3,cx-1,1,z1-3,'dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]')
+        # Ground shops have stocked shelves and cafe seats; upper homes have
+        # separate sleeping, sitting and cooking zones.
+        if f==0:
+            for xx in (x+3,x+6,x1-6,x1-3):
+                fill(xx,1,z+4,xx,3,z1-8,'barrel')
+            fill(x+3,1,z1-5,x+8,1,z1-5,'smooth_quartz')
+            put(x+6,2,z1-5,'water_cauldron[level=3]')
+            fill(x1-8,1,z1-7,x1-5,1,z1-7,'spruce_slab[type=bottom,waterlogged=false]')
+            put(x1-7,1,z1-5,'dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]')
+            put(x1-5,1,z1-5,'dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]')
+            fill(x1-8,1,z+3,x1-4,1,z+3,'dark_oak_planks')
+            put(x1-6,2,z+3,'smoker[facing=south,lit=false]')
+        else:
+            for xx,sign in ((x+3,1),(x1-4,-1)):
+                left,right=(x+1,cx-5) if sign==1 else (cx+5,x1-1)
+                # Frosted bedroom screen and a clear two-block passage.
+                fill(left,y+1,z+10,right,y+3,z+10,'stripped_spruce_log')
+                fill(xx,y+1,z+10,xx+1,y+2,z+10,AIR)
+                put(xx,y+1,z+4,'white_bed[facing=south,part=foot,occupied=false]')
+                put(xx,y+1,z+5,'white_bed[facing=south,part=head,occupied=false]')
+                fill(xx+sign,y+1,z+3,xx+sign,y+2,z+3,'barrel')
+                fill(xx,y+1,z+7,xx+2,y+1,z+8,'white_carpet')
+                fill(left,y+2,z+3,left,y+3,z+4,'bookshelf')
+                fill(xx,y+1,z1-6,xx+2,y+1,z1-6,'dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]')
+                fill(xx,y+1,z1-8,xx+1,y+1,z1-8,'spruce_slab[type=bottom,waterlogged=false]')
+                fill(left+1,y+1,z1-9,right-1,y+1,z1-9,'light_gray_carpet')
+                fill(left,y+1,z+12,left,y+2,z+12,'black_concrete')
+                fill(xx,y+1,z1-3,xx+3,y+1,z1-3,'smooth_quartz')
+                put(xx+1,y+1,z1-3,'water_cauldron[level=3]')
+                put(xx+2,y+4,z1-9,'ochre_froglight')
+                if MODDED:
+                    furniture(xx+2,y+1,z1-6,'dark_oak_modern_chair')
+                    furniture(xx+2,y+1,z1-3,'dark_oak_kitchen_cabinet')
+                    furniture(xx+3,y+1,z+3,'dark_oak_modern_wardrobe')
+    # Cut floor openings after furnishing every level so later floor fills do
+    # not seal the stairs. Landings connect to the shared centre corridor.
+    for f in range(floors-1):
+        y=f*5
+        fill(cx-1,y+5,z+3,cx+1,y+5,z+8,AIR)
+        for step in range(1,6):
+            fill(cx-1,y+step,z+3+step,cx+1,y+step,z+3+step,'polished_andesite')
+        fill(cx-2,y+1,z+3,cx-2,y+4,z+8,'iron_bars')
+    # Restore the accessible double entrance and add a real lobby canopy.
+    fill(cx,1,z1,cx+1,2,z1,AIR)
+    for xx,hinge in ((cx,'left'),(cx+1,'right')):
+        put(xx,1,z1,f'spruce_door[facing=south,half=lower,hinge={hinge},open=false,powered=false]')
+        put(xx,2,z1,f'spruce_door[facing=south,half=upper,hinge={hinge},open=false,powered=false]')
+    fill(cx-3,4,z1+1,cx+4,4,z1+2,'dark_oak_planks')
+    put(cx,3,z1+1,'sea_lantern')
+    fill(cx-2,0,z1+1,cx+3,0,z1+4,'polished_andesite')
+
+renovate_society(104,29,27,24,3)
+renovate_society(5,28,29,19,3)
+renovate_society(8,54,25,17,2)
+
 S.export()
 print('Player arrival: 44,1,92; Room 203 second floor: 65,7,45')
 print(f'Town footprint: {S.w} x {S.d}; physical build: {S.h} blocks high')
