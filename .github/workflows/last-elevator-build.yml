@@ -26,6 +26,8 @@ jobs:
       - name: Generate original scene soundscapes
         working-directory: last-elevator
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
           python -m pip install --disable-pip-version-check numpy==1.26.4 scipy==1.13.1
           python make_scene_ambience.py
       - uses: gradle/actions/setup-gradle@v4
