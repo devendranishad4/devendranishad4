@@ -39,11 +39,11 @@ public final class HudNetwork {
     }
     private static void show(ServerPlayer p,String text,int x,int y,int z){
         CHANNEL.sendTo(new Update(true,text,new BlockPos(x,y,z)),
-                p.connection.getConnection(),NetworkDirection.PLAY_TO_CLIENT);
+                p.connection.connection,NetworkDirection.PLAY_TO_CLIENT);
     }
     public static void clear(ServerPlayer p){
         CHANNEL.sendTo(new Update(false,"",BlockPos.ZERO),
-                p.connection.getConnection(),NetworkDirection.PLAY_TO_CLIENT);
+                p.connection.connection,NetworkDirection.PLAY_TO_CLIENT);
     }
     public static void sync(ServerPlayer p){
         CompoundTag d=p.getPersistentData().getCompound(LastElevator.ID);
