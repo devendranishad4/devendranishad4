@@ -2,5 +2,11 @@
   "lift_motor": {"subtitle":"The lift moves","sounds":["lastelevator:lift_motor"]},
   "passenger_breath": {"subtitle":"Breathing behind you","sounds":["lastelevator:passenger_breath"]},
   "horror_sting": {"subtitle":"The Passenger appears","sounds":["lastelevator:horror_sting"]},
-  "floor_ambience": {"subtitle":"The building hums","sounds":["lastelevator:floor_ambience"]}
+  "floor_ambience": {"subtitle":"The building hums","sounds":["lastelevator:floor_ambience"]},
+  "lift_door": {"subtitle":"Heavy lift doors move","sounds":["lastelevator:lift_door"]},
+  "lift_bell": {"subtitle":"A distant lift bell rings","sounds":["lastelevator:lift_bell"]},
+  "distant_steps": {"subtitle":"Footsteps behind you","sounds":["lastelevator:distant_steps"]},
+  "broken_radio": {"subtitle":"The radio crackles","sounds":["lastelevator:broken_radio"]},
+  "distant_knock": {"subtitle":"Knocking in the distance","sounds":["lastelevator:distant_knock"]},
+  "electrical_fault": {"subtitle":"Electricity sputters","sounds":["lastelevator:electrical_fault"]}
 }

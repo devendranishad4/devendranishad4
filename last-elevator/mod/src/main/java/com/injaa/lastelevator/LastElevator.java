@@ -52,6 +52,12 @@ public class LastElevator {
     public static final RegistryObject<SoundEvent> BREATH=registerSound("passenger_breath");
     public static final RegistryObject<SoundEvent> STING=registerSound("horror_sting");
     public static final RegistryObject<SoundEvent> AMBIENCE=registerSound("floor_ambience");
+    public static final RegistryObject<SoundEvent> DOOR=registerSound("lift_door");
+    public static final RegistryObject<SoundEvent> BELL=registerSound("lift_bell");
+    public static final RegistryObject<SoundEvent> STEPS=registerSound("distant_steps");
+    public static final RegistryObject<SoundEvent> RADIO=registerSound("broken_radio");
+    public static final RegistryObject<SoundEvent> KNOCK=registerSound("distant_knock");
+    public static final RegistryObject<SoundEvent> ELECTRIC=registerSound("electrical_fault");
     private static RegistryObject<SoundEvent> registerSound(String name){
         return SOUNDS.register(name,()->SoundEvent.createVariableRangeEvent(new ResourceLocation(ID,name)));
     }
@@ -86,6 +92,11 @@ public class LastElevator {
     private static void msg(ServerPlayer p,String message){p.sendSystemMessage(Component.literal("[Last Elevator] "+message));}
     private static void sound(ServerPlayer p,net.minecraft.sounds.SoundEvent sound,float pitch){
         p.level().playSound(null,p.blockPosition(),sound,SoundSource.BLOCKS,1.1f,pitch);
+    }
+    private static void distant(ServerPlayer p,SoundEvent event,double distance){
+        var look=p.getLookAngle();
+        p.level().playSound(null,p.getX()-look.x*distance,p.getY()+.6,p.getZ()-look.z*distance,
+                event,SoundSource.BLOCKS,.75f,1f);
     }
     private static int mark(ServerPlayer p,String name){
         CompoundTag d=state(p),marks=d.getCompound("marks"),v=new CompoundTag();
@@ -135,7 +146,7 @@ public class LastElevator {
         cleanup(p);d.putInt("scene",target);d.putInt("elapsed",0);
         d.putBoolean("lookScare",false);
         d.putInt("transition",12); // short lift travel sound before the safe teleport
-        sound(p,SoundEvents.IRON_DOOR_CLOSE,.7f);
+        sound(p,DOOR.get(),1f);
         sound(p,MOTOR.get(),.9f);
         msg(p,"Next: "+NAMES[target]);return 1;
     }
@@ -247,7 +258,7 @@ public class LastElevator {
         if(delay>0){
             d.putInt("delay",delay-1);
             if(delay%20==0)msg(p,"Starts in "+(delay/20)+"...");
-            if(delay==1){teleport(p,"lobby");msg(p,"ACTION");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),1f);}
+            if(delay==1){teleport(p,"lobby");msg(p,"ACTION");sound(p,BELL.get(),1f);}
             return;
         }
         int transition=d.getInt("transition");
@@ -265,9 +276,11 @@ public class LastElevator {
             if(t==60&&stage==2)giveFuse(p,2);
             if(t==75&&stage==4)giveFuse(p,3);
         }
-        if(t==20&&stage==2){msg(p,"The directory has no floor 13.");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.8f);}
-        if(t==40&&stage==3){msg(p,"RULE: After the bell, don't look at the other passenger.");sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.6f);}
-        if(t==85&&stage==3){sound(p,SoundEvents.WOOD_STEP,.7f);}
+        if(t==60&&stage==0)distant(p,KNOCK.get(),7);
+        if(t==20&&stage==2){msg(p,"The directory has no floor 13.");sound(p,BELL.get(),.8f);}
+        if(t==220&&stage==2)distant(p,KNOCK.get(),6);
+        if(t==40&&stage==3){msg(p,"RULE: After the bell, don't look at the other passenger.");sound(p,BELL.get(),.8f);}
+        if(t==85&&stage==3)distant(p,STEPS.get(),5);
         if(t==110&&stage==3){spawn(p,"passenger_rule",false);sound(p,BREATH.get(),.7f);}
         if(stage==3&&t>=110&&t<260&&!d.getBoolean("lookScare")&&d.hasUUID("passengerId")){
             var seen=((ServerLevel)p.level()).getEntity(d.getUUID("passengerId"));
@@ -281,12 +294,13 @@ public class LastElevator {
             }
         }
         if(t==260&&stage==3)cleanup(p);
-        if(t==40&&stage==4){sound(p,SoundEvents.LEVER_CLICK,.6f);msg(p,"The radio repeats your voice...");}
+        if(t==40&&stage==4){sound(p,RADIO.get(),1f);msg(p,"The radio repeats your voice...");}
+        if(t==100&&stage==4)sound(p,ELECTRIC.get(),1f);
         if(t==140&&stage==4){spawn(p,"passenger_maintenance",true);msg(p,"Run to the lift!");}
-        if(t==50&&stage==6){msg(p,"Same landing. One lamp is gone.");sound(p,SoundEvents.IRON_DOOR_CLOSE,.7f);}
+        if(t==50&&stage==6){msg(p,"Same landing. One lamp is gone.");distant(p,KNOCK.get(),5);}
         if(t==180&&stage==6){msg(p,"The landing repeats again. Find floor 0.");}
         if(stage==6&&(t==400||t==1050||t==1600)){
-            teleport(p,"stair");sound(p,SoundEvents.IRON_DOOR_CLOSE,.8f);
+            teleport(p,"stair");sound(p,DOOR.get(),.9f);
             msg(p,"The same landing again... the lights are changing.");
         }
         if(t==70&&stage==7){spawn(p,"passenger_zero",true);msg(p,"Break the emergency seal and reach the exit!");}
@@ -300,7 +314,7 @@ public class LastElevator {
             TokyoDirector.seal((ServerLevel)p.level(),false);
             sound(p,SoundEvents.IRON_DOOR_OPEN,.7f);msg(p,"Emergency seal open—RUN!");
         }
-        if(t==40&&stage==8){msg(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.45f);}
+        if(t==40&&stage==8){msg(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());sound(p,BELL.get(),.85f);}
         if((stage==4||stage==7)&&t%30==0)((ServerLevel)p.level()).sendParticles(ParticleTypes.SMOKE,p.getX(),p.getY()+.8,p.getZ(),2,.4,.3,.4,0);
         if(d.getBoolean("auto")&&t>=AUTO_SECONDS[stage]*20){
             if(stage<SCENES.length-1)scene(p,stage+1,true);

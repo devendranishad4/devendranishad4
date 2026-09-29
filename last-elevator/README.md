@@ -1,6 +1,8 @@
 # The Last Elevator — current build
 
-## Tokyo city edition (0.3.0)
+## Tokyo city edition (0.3.1)
+
+Version 0.3.1 adds six original, generated horror cues to the four existing sounds: heavy lift doors, a two-tone bell, receding footsteps, distorted radio static, distant knocks, and an electrical fault. The scene director places footsteps and knocks behind the player and triggers one-shot effects at scripted moments. All cues are in the JAR; they use Minecraft's Blocks sound volume slider. These are sound effects, not field recordings or spoken dialogue. Audio decode and timing were checked from the assets and source, but a Minecraft client listening pass is still outstanding.
 
 This revision stages the story **inside the supplied Tokyo Inspired City 1.0.10 world**. The lobby is a 20-block-high existing atrium, the office is in a glass tower, and Floor 13 uses a furnished, multi-floor Tokyo building with a long corridor, doors and rooms. The mod adds an interior reception, lift, trim, lighting, story props and markers while preserving the city facade and roads. Use **a copy** of the exact map. This is a different visual and spatial result from the earlier standalone blockout.
 
