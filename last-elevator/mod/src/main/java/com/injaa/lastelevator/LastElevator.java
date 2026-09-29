@@ -95,7 +95,8 @@ public class LastElevator {
     private static boolean safe(ServerPlayer p,String name){
         if(!marked(p,name)){msg(p,"Missing marker: "+name);return false;}
         BlockPos at=BlockPos.of(marker(p,name).getLong("pos"));
-        if(!p.level().hasChunkAt(at)){msg(p,"Marker chunk is not loaded: "+name);return false;}
+        // Tokyo story scenes are in separate real buildings; load the destination before checking it.
+        ((ServerLevel)p.level()).getChunkAt(at);
         boolean space=p.level().getBlockState(at).getCollisionShape(p.level(),at).isEmpty()
                 &&p.level().getBlockState(at.above()).getCollisionShape(p.level(),at.above()).isEmpty();
         boolean floor=!p.level().getBlockState(at.below()).getCollisionShape(p.level(),at.below()).isEmpty();
@@ -153,6 +154,7 @@ public class LastElevator {
             for(int x=49;x<=50;x++)for(int y=45;y<=48;y++)for(int z=8;z<=11;z++)
                 p.level().setBlock(origin.offset(x,y,z),Blocks.IRON_BLOCK.defaultBlockState(),2);
         }
+        if(d.getBoolean("tokyoInstalled"))TokyoDirector.seal((ServerLevel)p.level(),true);
         d.putInt("delay",0);d.putInt("scene",0);d.putInt("elapsed",0);d.putInt("transition",0);
         d.putInt("fuses",0);d.putBoolean("auto",false);
         d.putBoolean("lookScare",false);
@@ -189,6 +191,7 @@ public class LastElevator {
         root.then(marks);
         root.then(Commands.literal("check").executes(c->check(c.getSource().getPlayerOrException())));
         root.then(Commands.literal("build").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();String result=SceneBuilder.build(p);msg(p,result);return result.startsWith("Placed")?1:0;}));
+        root.then(Commands.literal("tokyo").executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();String result=TokyoDirector.install(p);msg(p,result);return result.startsWith("Tokyo city story installed")?1:0;}));
         root.then(Commands.literal("setup").executes(c->setup(c.getSource().getPlayerOrException())));
         root.then(Commands.literal("start").executes(c->start(c.getSource().getPlayerOrException(),20))
                 .then(Commands.argument("seconds",IntegerArgumentType.integer(10,20))
@@ -291,6 +294,10 @@ public class LastElevator {
             BlockPos origin=BlockPos.of(d.getLong("builtOrigin"));
             for(int x=49;x<=50;x++)for(int y=45;y<=48;y++)for(int z=8;z<=11;z++)
                 p.level().setBlock(origin.offset(x,y,z),Blocks.AIR.defaultBlockState(),2);
+            sound(p,SoundEvents.IRON_DOOR_OPEN,.7f);msg(p,"Emergency seal open—RUN!");
+        }
+        if(t==1300&&stage==7&&d.getBoolean("tokyoInstalled")){
+            TokyoDirector.seal((ServerLevel)p.level(),false);
             sound(p,SoundEvents.IRON_DOOR_OPEN,.7f);msg(p,"Emergency seal open—RUN!");
         }
         if(t==40&&stage==8){msg(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());sound(p,SoundEvents.NOTE_BLOCK_BELL.value(),.45f);}

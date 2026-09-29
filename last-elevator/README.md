@@ -1,5 +1,13 @@
 # The Last Elevator — current build
 
+## Tokyo city edition (0.3.0)
+
+This revision stages the story **inside the supplied Tokyo Inspired City 1.0.10 world**. The lobby is a 20-block-high existing atrium, the office is in a glass tower, and Floor 13 uses a furnished, multi-floor Tokyo building with a long corridor, doors and rooms. The mod adds an interior reception, lift, trim, lighting, story props and markers while preserving the city facade and roads. Use **a copy** of the exact map. This is a different visual and spatial result from the earlier standalone blockout.
+
+Install the compiled mod JAR in Minecraft Java 1.20.1 with Forge 47.4.20. In a copy of Tokyo Inspired City 1.0.10, enable commands and run `/difficulty normal`, `/le tokyo`, `/le check`, `/le setup`, `/le auto 20`. `/le tokyo` checks known original map blocks before editing; it refuses a different world. The AUTO story still runs about 14 minutes 45 seconds after the 20-second delay. `/le reset` reseals the emergency exit for a retake. Do not run `/le build` in this workflow; that command is the old independent set builder for an empty plot.
+
+The `tokyo_atrium_lobby_real_blocks_preview.png` render is made from the real Tokyo map block data plus the 0.3.0 placements. It is a flat-color inspection render, not a Minecraft screenshot or shader output. A real client launch and full recording remain necessary before claiming exact visual or runtime fidelity.
+
 Minecraft Java **1.20.1**, Forge **47.4.20**, Java **17**. This package contains six generated Sponge v2 WorldEdit schematics, top-down set plans, mod **source code**, and the story script. It does **not** contain a compiled, game-tested JAR. Do not install the source zip as a mod.
 
 ## Status
