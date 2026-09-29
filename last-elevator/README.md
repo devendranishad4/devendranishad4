@@ -6,7 +6,7 @@ This source rebuild puts the lobby, floor 6, hotel floor 13, maintenance, stairs
 
 ## Status
 
-The new Java source has a successful Forge compile from the first preview commit. Later corrections to stair geometry, keys, panel, and door timing require another compile. **No full Minecraft client test or complete recording has passed.** The block preview images are geometry renders using colors from the original map; they are not in-game screenshots. This is still a preview, not a finished video mod.
+The prior preview source passed a Forge compile. The latest lobby, electrical room, and control corrections require a fresh compile. **No full Minecraft client test or complete recording has passed.** The block preview images are geometry renders using colors from the original map; they are not in-game screenshots. This is still a preview, not a finished video mod.
 
 Some planned script details need client validation or additional work: a live echo of the creator's own recorded voice, the player-head skin on offline accounts, exterior lobby approach and interior visual polish, Passenger line of sight and pathfinding, and a full timed camera-safe playthrough. The cold open is a separate shot to cut to the beginning. The player's spoken lines are performed during recording.
 

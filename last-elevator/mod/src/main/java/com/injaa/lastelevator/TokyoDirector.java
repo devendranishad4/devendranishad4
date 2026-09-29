@@ -8,6 +8,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
@@ -74,7 +76,8 @@ public final class TokyoDirector {
         sign(w,-255,85,102,"MAINTENANCE","FUSES 0 / 3","Find all three","Return here");
         for(int x:new int[]{-257,-255,-253})set(w,x,88,102,Blocks.POLISHED_BLACKSTONE);
         set(w,-255,84,100,Blocks.IRON_BLOCK);
-        set(w,-255,85,100,Blocks.STONE_BUTTON);
+        w.setBlock(new BlockPos(-255,85,100),Blocks.STONE_BUTTON.defaultBlockState()
+                .setValue(ButtonBlock.FACE,AttachFace.FLOOR),2);
         sign(w,-261,85,102,"DON'T RETURN","WITH TWO","PEOPLE","");
         sign(w,-247,100,102,"FLOOR 13","NOT ON THE","DIRECTORY","");
         // Furnished original suite: a second untouched cup is the visual clue.
@@ -82,7 +85,8 @@ public final class TokyoDirector {
         sign(w,-245,100,103,"AFTER THE BELL","DO NOT LOOK","AT THE OTHER","PASSENGER");
         sign(w,-245,90,102,"MAINTENANCE","RADIO / BREAKER","FUSE THREE","");
         set(w,-251,89,101,Blocks.IRON_BLOCK);
-        set(w,-251,90,101,Blocks.STONE_BUTTON);
+        w.setBlock(new BlockPos(-251,90,101),Blocks.STONE_BUTTON.defaultBlockState()
+                .setValue(ButtonBlock.FACE,AttachFace.FLOOR),2);
         sign(w,-251,90,102,"BREAKER","KEY RELEASE","PRESS BUTTON","");
         fill(w,-257,90,104,-255,92,104,Blocks.IRON_BARS);
         sign(w,-259,90,102,"ELECTRICAL","ROOM LOCKED","FIND KEY","");

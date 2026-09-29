@@ -6,6 +6,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.state.properties.AttachFace;
 
 /** Physical, block-moving car in the supplied Tokyo tower, not a scene teleport. */
 public final class TowerLift {
@@ -51,16 +53,19 @@ public final class TowerLift {
         door(w,MIN,false);
     }
     private static void lounge(ServerLevel w){
-        // Two-height ground lobby in the heart of the existing high-rise.
-        fill(w,-269,75,104,-241,83,113,Blocks.AIR);
+        // Four-height atrium, carved inside the real high-rise rather than a
+        // freestanding box. The upper corridor keeps access to story floors.
+        fill(w,-269,75,104,-241,94,113,Blocks.AIR);
+        fill(w,-269,95,104,-241,95,113,Blocks.SMOOTH_QUARTZ);
         for(int x=-269;x<=-241;x++)for(int z=104;z<=113;z++){
-            put(w,x,74,z,(x+z)%8==0?Blocks.CHISELED_QUARTZ_BLOCK:
-                    (z==108||z==109?Blocks.POLISHED_DEEPSLATE:Blocks.POLISHED_DIORITE));
+            put(w,x,74,z,z==108||z==109?Blocks.POLISHED_DEEPSLATE:
+                    ((x/3+z/3)%2==0?Blocks.POLISHED_BLACKSTONE:Blocks.POLISHED_DIORITE));
         }
         // Rebuild the south facade opened by the new lounge; glass and a
         // street-to-lobby stair replace the original room partitions.
-        for(int x=-269;x<=-241;x++)for(int y=75;y<=83;y++)
-            put(w,x,y,113,y==75||y==83||x%6==0?Blocks.SMOOTH_QUARTZ:Blocks.BLACK_STAINED_GLASS);
+        for(int x=-269;x<=-241;x++)for(int y=75;y<=94;y++)
+            put(w,x,y,113,y==75||y==94||y%5==4||x%6==0?
+                    Blocks.SMOOTH_QUARTZ:Blocks.BLACK_STAINED_GLASS);
         fill(w,-256,75,113,-253,78,113,Blocks.AIR);
         for(int z=114;z<=122;z++){
             int floor=74-(z-113);
@@ -68,18 +73,51 @@ public final class TowerLift {
             fill(w,-256,floor+1,z,-253,floor+3,z,Blocks.AIR);
         }
         for(int x:new int[]{-268,-257,-245})for(int z:new int[]{105,112}){
-            fill(w,x,75,z,x+1,82,z+1,Blocks.SMOOTH_QUARTZ);
+            fill(w,x,75,z,x+1,93,z+1,Blocks.SMOOTH_QUARTZ);
             fill(w,x,75,z,x+1,75,z+1,Blocks.POLISHED_BLACKSTONE);
-            fill(w,x,82,z,x+1,82,z+1,Blocks.CUT_COPPER);
+            for(int y:new int[]{83,88,93})fill(w,x,y,z,x+1,y,z+1,Blocks.CUT_COPPER);
         }
+        for(int floor:new int[]{84,89}){
+            fill(w,-269,floor,104,-241,floor,105,Blocks.DARK_OAK_PLANKS);
+            fill(w,-269,floor+1,106,-241,floor+1,106,Blocks.IRON_BARS);
+            for(int x:new int[]{-265,-255,-245})
+                fill(w,x,floor+1,103,x+2,floor+3,104,Blocks.AIR);
+        }
+        // The maintenance fuse needs a real room above the atrium. Preserve a
+        // solid landing, enclose the electrical bay, and cut its corridor door.
+        fill(w,-260,89,104,-253,89,110,Blocks.POLISHED_DEEPSLATE);
+        fill(w,-260,90,104,-253,93,110,Blocks.AIR);
+        fill(w,-260,94,104,-253,94,110,Blocks.POLISHED_DEEPSLATE);
+        for(int y=90;y<=93;y++){
+            for(int z=104;z<=110;z++){
+                put(w,-260,y,z,Blocks.POLISHED_DEEPSLATE);
+                put(w,-253,y,z,Blocks.POLISHED_DEEPSLATE);
+            }
+            for(int x=-259;x<=-254;x++){
+                put(w,x,y,104,Blocks.POLISHED_DEEPSLATE);
+                put(w,x,y,110,Blocks.POLISHED_DEEPSLATE);
+            }
+        }
+        fill(w,-257,90,102,-255,92,103,Blocks.AIR);
+        fill(w,-257,90,104,-255,92,104,Blocks.IRON_BARS);
+        put(w,-256,93,107,Blocks.REDSTONE_LAMP);
         for(int x:new int[]{-264,-253,-244}){
-            fill(w,x,82,108,x,83,108,Blocks.CHAIN);
-            fill(w,x-1,81,107,x+1,81,109,Blocks.CUT_COPPER);
-            put(w,x,81,108,Blocks.OCHRE_FROGLIGHT);
+            fill(w,x,91,108,x,94,108,Blocks.CHAIN);
+            fill(w,x-1,90,107,x+1,90,109,Blocks.CUT_COPPER);
+            put(w,x,90,108,Blocks.OCHRE_FROGLIGHT);
+            put(w,x,83,108,Blocks.OCHRE_FROGLIGHT);
         }
         // Reception, dark wood seating and a direct arch into the lift corridor.
-        fill(w,-264,75,110,-258,76,111,Blocks.DARK_OAK_PLANKS);
-        fill(w,-264,77,111,-258,77,111,Blocks.OCHRE_FROGLIGHT);
+        fill(w,-265,75,112,-257,82,112,Blocks.DARK_OAK_LOG);
+        for(int x=-265;x<=-257;x+=3)fill(w,x,75,112,x,82,112,Blocks.CUT_COPPER);
+        fill(w,-264,79,112,-258,79,112,Blocks.OCHRE_FROGLIGHT);
+        fill(w,-264,75,109,-258,76,110,Blocks.POLISHED_BLACKSTONE_BRICKS);
+        fill(w,-264,76,109,-258,76,109,Blocks.OCHRE_FROGLIGHT);
+        fill(w,-264,77,109,-258,77,110,Blocks.DARK_OAK_PLANKS);
+        for(int[] at:new int[][]{{-267,107},{-244,110}}){
+            fill(w,at[0],75,at[1],at[0]+1,76,at[1]+1,Blocks.POLISHED_BLACKSTONE);
+            fill(w,at[0],77,at[1],at[0]+1,79,at[1]+1,Blocks.OAK_LEAVES);
+        }
         for(int x:new int[]{-252,-247}){
             fill(w,x,75,110,x+2,75,110,Blocks.DARK_OAK_STAIRS);
             fill(w,x+1,75,107,x+1,75,108,Blocks.BROWN_CARPET);
@@ -164,7 +202,8 @@ public final class TowerLift {
         put(w,-233,floor+4,101,Blocks.SEA_LANTERN);
         // Button is mounted on its own floor tile and moves with the car.
         put(w,-233,floor,100,Blocks.IRON_BLOCK);
-        put(w,-233,floor+1,100,Blocks.STONE_BUTTON);
+        w.setBlock(new BlockPos(-233,floor+1,100),Blocks.STONE_BUTTON.defaultBlockState()
+                .setValue(ButtonBlock.FACE,AttachFace.FLOOR),2);
     }
     private static void door(ServerLevel w,int floor,boolean closed){
         for(int y=floor+1;y<=floor+3;y++)for(int z=100;z<=101;z++){
