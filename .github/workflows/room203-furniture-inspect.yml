@@ -1,7 +1,6 @@
 name: Inspect 1.20.1 furniture registry
 on:
-  push:
-    branches: [codex/room203-town]
+  workflow_dispatch:
 jobs:
   inspect:
     runs-on: ubuntu-latest
