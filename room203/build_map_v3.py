@@ -118,22 +118,37 @@ fill(61,7,51,83,10,55,AIR)
 fill(59,8,53,59,9,54,'tinted_glass')
 fill(84,8,52,84,9,54,'tinted_glass')
 
-# Physical stair: broad landings and six solid steps between each floor.
-# It remains open to the street; floors are reached without teleportation.
+# Exterior access: real stair-shaped treads with slim supports and a continuous
+# 3-block-wide flight. Each landing joins the open gallery at the next level.
 for f in range(3):
     y=f*6
     zbase=29+f*13
-    fill(51,y,zbase,57,y,zbase+10,'polished_deepslate')
-    for i in range(1,7):
-        fill(52,y+i,zbase+1+i,54,y+i,zbase+1+i,'polished_andesite')
-        if i<6:fill(51,y+i,zbase+1+i,51,y+i+1,zbase+1+i,'iron_bars')
-    fill(52,y+6,zbase+7,59,y+6,zbase+10,'polished_andesite')
-    fill(50,y+1,zbase,50,y+6,zbase,'polished_deepslate')
-    fill(50,y+1,zbase+10,50,y+6,zbase+10,'polished_deepslate')
-fill(59,24,27,84,24,77,'deepslate_tile_slab[type=bottom]')
-for z in range(28,77,8):
-    fill(59,25,z,84,25,z,'polished_deepslate')
-for x in (59,84):fill(x,25,27,x,26,77,'iron_bars')
+    fill(52,y,zbase,59,y,zbase+2,'polished_andesite')
+    for i in range(6):
+        zz=zbase+3+i
+        fill(52,y+i,zz,54,y+i,zz,
+             'stone_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]')
+        if i in (2,5):
+            fill(52,y,zz,52,y+i-1,zz,'polished_deepslate_wall')
+            fill(54,y,zz,54,y+i-1,zz,'polished_deepslate_wall')
+        put(51,y+i+1,zz,'iron_bars')
+        put(55,y+i+1,zz,'iron_bars')
+        if i in (0,3,5):
+            put(51,y+i+2,zz,'iron_bars')
+            put(55,y+i+2,zz,'iron_bars')
+    fill(52,y+6,zbase+9,59,y+6,zbase+11,'polished_andesite')
+    fill(51,y+7,zbase+9,51,y+7,zbase+11,'iron_bars')
+    for zz in (zbase+9,zbase+11):
+        fill(52,y,zz,52,y+5,zz,'stripped_dark_oak_log')
+    put(52,y+8,zbase+10,'lantern[hanging=true,waterlogged=false]')
+# A finished low roof: overhanging eaves, parapet and a few rooftop services.
+fill(54,24,25,87,24,79,'deepslate_tile_slab[type=bottom]')
+fill(59,25,27,84,25,27,'polished_deepslate')
+fill(59,25,77,84,25,77,'polished_deepslate')
+for x in (59,84):fill(x,25,27,x,25,77,'polished_deepslate')
+for z in (36,54,69):
+    fill(77,25,z,81,26,z+2,'polished_deepslate')
+    put(79,27,z+1,'iron_bars')
 
 # Entrance court, mailboxes, covered bicycles and service lane behind.
 fill(52,0,42,54,0,68,'polished_andesite')
@@ -596,10 +611,64 @@ def renovate_society(x,z,w,d,floors):
     fill(cx-3,4,z1+1,cx+4,4,z1+2,'dark_oak_planks')
     put(cx,3,z1+1,'sea_lantern')
     fill(cx-2,0,z1+1,cx+3,0,z1+4,'polished_andesite')
+    # Break the old continuous side-glass strip into occupied bays.
+    for f in range(floors):
+        y=f*5
+        for zz in range(z+3,z1-3,6):
+            fill(x,y+1,zz,x,y+4,zz,'stripped_dark_oak_log')
+            fill(x1,y+1,zz,x1,y+4,zz,'stripped_dark_oak_log')
+            fill(x-1,y+4,zz,x-1,y+4,zz+4,'dark_oak_slab[type=bottom,waterlogged=false]')
+            fill(x1+1,y+4,zz,x1+1,y+4,zz+4,'dark_oak_slab[type=bottom,waterlogged=false]')
+            if zz%2==0:put(x-1,y+3,zz+2,'lantern[hanging=true,waterlogged=false]')
+        fill(x-1,y+1,z+2,x-1,y+1,z1-2,'polished_deepslate_slab[type=bottom,waterlogged=false]')
+        fill(x1+1,y+1,z+2,x1+1,y+1,z1-2,'polished_deepslate_slab[type=bottom,waterlogged=false]')
 
 renovate_society(104,29,27,24,3)
 renovate_society(5,28,29,19,3)
 renovate_society(8,54,25,17,2)
+
+# The filmed elevation has individual entrance bays rather than a repeated
+# unbroken wall. The covers stay above head height and the gallery stays open.
+for f in range(4):
+    y=f*6
+    for j in range(6):
+        z=30+j*7
+        fill(56,y+4,z-1,61,y+4,z+2,'dark_oak_slab[type=bottom,waterlogged=false]')
+        put(57,y+3,z+1,'lantern[hanging=true,waterlogged=false]')
+        fill(59,y+3,z,59,y+3,z+1,'orange_stained_glass')
+        fill(59,y+1,z+3,59,y+3,z+3,'stripped_dark_oak_log')
+        fill(59,y+1,z+4,59,y+3,z+5,'gray_terracotta' if j%2 else 'light_gray_terracotta')
+        put(57,y+1,z+4,'flower_pot')
+        fill(55,y+1,z+1,55,y+1,z+6,'dark_oak_fence')
+        for zz in (z+1,z+6):
+            fill(55,y+1,zz,55,y+2,zz,'stripped_dark_oak_log')
+        fill(55,y+3,z,59,y+3,z,'dark_oak_planks')
+    fill(59,y+1,27,59,y+4,27,'stripped_dark_oak_log')
+    fill(59,y+1,77,59,y+4,77,'stripped_dark_oak_log')
+    for xx in (65,75):
+        fill(xx,y+2,27,xx+3,y+3,27,'gray_stained_glass')
+        fill(xx,y+2,77,xx+3,y+3,77,'gray_stained_glass')
+        fill(xx,y+4,26,xx+3,y+4,26,'dark_oak_slab[type=bottom,waterlogged=false]')
+        fill(xx,y+4,78,xx+3,y+4,78,'dark_oak_slab[type=bottom,waterlogged=false]')
+for xx in (59,84):
+    for zz in (27,77):
+        fill(xx,1,zz,xx,23,zz,'stripped_dark_oak_log')
+
+# Mailboxes and street machines read as props rather than coloured cubes.
+fill(51,1,46,51,3,49,AIR)
+fill(51,1,46,51,2,49,'polished_deepslate')
+for zz in (46,47,48,49):put(51,2,zz,'iron_trapdoor[facing=west,half=bottom,open=false,powered=false,waterlogged=false]')
+for xx,zz in ((33,45),(34,136),(101,107),(132,175),(155,30),(197,110)):
+    fill(xx,1,zz,xx+2,3,zz,'red_concrete')
+    fill(xx,2,zz-1,xx+2,2,zz-1,'sea_lantern')
+    fill(xx,1,zz-1,xx+2,1,zz-1,'white_concrete')
+
+# The balcony rail must have real openings at every stair departure and
+# arrival. These cuts are applied last so facade detailing cannot seal them.
+for f in range(3):
+    y=f*6;zbase=29+f*13
+    fill(55,y+1,zbase,55,y+2,zbase+3,AIR)
+    fill(55,y+7,zbase+9,55,y+8,zbase+11,AIR)
 
 S.export()
 print('Player arrival: 44,1,92; Room 203 second floor: 65,7,45')
