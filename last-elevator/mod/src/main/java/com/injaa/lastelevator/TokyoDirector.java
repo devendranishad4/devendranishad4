@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.entity.SkullBlockEntity;
 
 /** Story locations in one real multi-floor tower of Tokyo Inspired City 1.0.10. */
 public final class TokyoDirector {
@@ -58,12 +59,20 @@ public final class TokyoDirector {
         sign(w,-247,75,101,"NIGHT SHIFT","11:47 PM","Floor 6: panel","3 fuses missing");
         sign(w,-240,75,102,"LIFT","Press button","inside car","");
         sign(w,-255,85,102,"MAINTENANCE","FUSES 0 / 3","Find all three","Return here");
+        for(int x:new int[]{-257,-255,-253})set(w,x,88,102,Blocks.POLISHED_BLACKSTONE);
         set(w,-255,84,100,Blocks.IRON_BLOCK);
         set(w,-255,85,100,Blocks.STONE_BUTTON);
         sign(w,-261,85,102,"DON'T RETURN","WITH TWO","PEOPLE","");
         sign(w,-247,100,102,"FLOOR 13","NOT ON THE","DIRECTORY","");
+        // Furnished original suite: a second untouched cup is the visual clue.
+        set(w,-261,101,108,Blocks.SEA_PICKLE);
         sign(w,-245,100,103,"AFTER THE BELL","DO NOT LOOK","AT THE OTHER","PASSENGER");
         sign(w,-245,90,102,"MAINTENANCE","RADIO / BREAKER","FUSE THREE","");
+        set(w,-251,89,101,Blocks.IRON_BLOCK);
+        set(w,-251,90,101,Blocks.STONE_BUTTON);
+        sign(w,-251,90,102,"BREAKER","KEY RELEASE","PRESS BUTTON","");
+        fill(w,-257,90,104,-255,92,104,Blocks.IRON_BARS);
+        sign(w,-259,90,102,"ELECTRICAL","ROOM LOCKED","FIND KEY","");
         sign(w,-245,115,102,"0","ONE PASSENGER","MUST REMAIN","");
         sign(w,-258,115,102,"EMPLOYEE","PHOTO FILE","UNASSIGNED","");
         // Visible, reachable fuses. They are spawned as items by /le setup.
@@ -71,9 +80,9 @@ public final class TokyoDirector {
         marker(player,"office",-252,85,100,90);marker(player,"hotel",-267,100,100,90);
         marker(player,"maintenance",-250,90,100,90);marker(player,"stair",-241,105,100,90);
         marker(player,"zero",-250,115,100,90);marker(player,"street",-292,66,100,90);
-        marker(player,"fuse1",-265,85,100,0);marker(player,"fuse2",-260,100,100,0);
-        marker(player,"fuse3",-262,90,100,0);
-        marker(player,"passenger_rule",-233,100,101,0);
+        marker(player,"fuse1",-265,85,100,0);marker(player,"fuse2",-256,100,106,0);
+        marker(player,"fuse3",-256,90,106,0);
+        marker(player,"passenger_rule",-245,100,100,0);
         marker(player,"passenger_maintenance",-268,90,100,0);
         marker(player,"passenger_zero",-259,115,100,0);
         d=player.getPersistentData().getCompound(LastElevator.ID);
@@ -88,10 +97,30 @@ public final class TokyoDirector {
     }
     public static void employee(ServerPlayer p){
         String name=p.getGameProfile().getName();
-        sign((ServerLevel)p.level(),-258,115,102,"EMPLOYEE","PHOTO FILE",name,"");
+        ServerLevel w=(ServerLevel)p.level();
+        sign(w,-258,115,102,"EMPLOYEE","PHOTO FILE",name,"");
+        BlockPos head=new BlockPos(-258,116,103);
+        set(w,-258,115,103,Blocks.POLISHED_BLACKSTONE);
+        w.setBlock(head,Blocks.PLAYER_HEAD.defaultBlockState(),2);
+        if(w.getBlockEntity(head) instanceof SkullBlockEntity skull){
+            skull.setOwner(p.getGameProfile());skull.setChanged();
+            w.sendBlockUpdated(head,w.getBlockState(head),w.getBlockState(head),3);
+        }
     }
     public static void operator(ServerPlayer p){
         String name=p.getGameProfile().getName();
         sign((ServerLevel)p.level(),-292,66,102,"TOWER DIRECTORY","NIGHT OPERATOR",name,"");
+    }
+    public static void restorePanel(ServerPlayer p){
+        ServerLevel w=(ServerLevel)p.level();
+        for(int x:new int[]{-257,-255,-253})set(w,x,88,102,Blocks.SEA_LANTERN);
+        sign(w,-255,85,102,"POWER RESTORED","FUSES 3 / 3","ONE PASSENGER","MUST REMAIN");
+    }
+    public static void resetPanel(ServerLevel w){
+        for(int x:new int[]{-257,-255,-253})set(w,x,88,102,Blocks.POLISHED_BLACKSTONE);
+        sign(w,-255,85,102,"MAINTENANCE","FUSES 0 / 3","Find all three","Return here");
+    }
+    public static void electricalDoor(ServerLevel w,boolean locked){
+        fill(w,-257,90,104,-255,92,104,locked?Blocks.IRON_BARS:Blocks.AIR);
     }
 }

@@ -22,7 +22,7 @@ public final class TowerStory {
             "Find fuse 1 in the office corridor, then ride to the missing floor.",
             "Find fuse 2 in the hotel corridor. Return to the lift.",
             "After the bell, do not look at the Passenger. Press the lift button again.",
-            "Find fuse 3 in maintenance, then run back to the lift.",
+            "Press the breaker for a key, unlock the electrical room, take fuse 3, then run.",
             "Install the three fuses at the office panel. Then take the service stairs.",
             "The landing repeats. Keep climbing the actual stairs toward floor 0.",
             "Your name is on the wall. Break the emergency seal and descend the fire stairs.",
@@ -77,13 +77,20 @@ public final class TowerStory {
         CompoundTag d=data(p);despawn(p);
         d.putInt("scene",target);d.putInt("elapsed",0);d.putBoolean("sawPassenger",false);
         say(p,"SCENE "+target+" — "+OBJECTIVES[target]);
-        if(target==2){cue(p,LastElevator.BELL.get());say(p,"FLOOR 13. The directory has no floor 13.");}
+        if(target==1||target==2||target==4){
+            int fuse=target==1?1:target==2?2:3;
+            CompoundTag marker=data(p).getCompound("marks").getCompound("fuse"+fuse);
+            if(!data(p).getBoolean("fuse"+fuse))
+                dropFuse((ServerLevel)p.level(),BlockPos.of(marker.getLong("pos")),fuse);
+        }
+        if(target==2){cue(p,LastElevator.BELL.get());say(p,"FLOOR 13. The directory has no floor 13. A guest room has two cups set for one person.");}
         if(target==3){cue(p,LastElevator.BELL.get());say(p,"RULE: Do not look at the other passenger after the bell.");}
         if(target==4)cue(p,LastElevator.AMBIENCE.get());
         if(target==5){cue(p,LastElevator.BELL.get());say(p,"Bring all three fuses to the panel on floor 6.");}
         if(target==6){say(p,"The staircase keeps returning to the same landing.");cue(p,LastElevator.KNOCK.get());}
         if(target==7){TokyoDirector.employee(p);say(p,"FLOOR 0. That is your name on the employee board.");cue(p,LastElevator.STING.get());}
-        if(target==8){TokyoDirector.operator(p);cue(p,LastElevator.BELL.get());say(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());}
+        if(target==8){((ServerLevel)p.level()).setDayTime(1000);TokyoDirector.operator(p);
+            cue(p,LastElevator.BELL.get());say(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());}
     }
     private static void dropFuse(ServerLevel w,BlockPos pos,int number){
         w.getChunkAt(pos);
@@ -108,10 +115,14 @@ public final class TowerStory {
         d.putInt("delay",seconds*20);d.putInt("elapsed",0);d.putInt("scene",0);
         d.putInt("fuses",0);d.putBoolean("panelRestored",false);d.putBoolean("sealOpen",false);
         d.putBoolean("ruleSpawned",false);d.putBoolean("lookScare",false);
+        d.putBoolean("zeroSpawn",false);
+        d.putBoolean("breakerKey",false);d.putBoolean("electricalOpen",false);
         d.putBoolean("coldOpen",false);
         d.putBoolean("loop1",false);d.putBoolean("loop2",false);
         for(int i=1;i<=3;i++)d.putBoolean("fuse"+i,false);
         TokyoDirector.seal((ServerLevel)p.level(),true);
+        TokyoDirector.electricalDoor((ServerLevel)p.level(),true);
+        ((ServerLevel)p.level()).setDayTime(18000);
         say(p,"Recording delay: "+seconds+" seconds. Then enter the lift; it will not move you until you press the button.");
         return 1;
     }
@@ -120,6 +131,7 @@ public final class TowerStory {
         if(number<1||number>3||d.getBoolean("fuse"+number))return 0;
         int stage=d.getInt("scene");
         if((number==1&&stage!=1)||(number==2&&stage!=2)||(number==3&&stage!=4))return 0;
+        if(number==3&&!d.getBoolean("electricalOpen")){say(p,"The electrical room is still locked.");return 0;}
         d.putBoolean("fuse"+number,true);d.putInt("fuses",d.getInt("fuses")+1);
         cue(p,LastElevator.ELECTRIC.get());
         if(number==1){say(p,"FUSE 1/3. The printer says: DON'T RETURN WITH TWO PEOPLE.");
@@ -127,23 +139,42 @@ public final class TowerStory {
             p.getInventory().add(paper);}
         if(number==2){say(p,"FUSE 2/3. A bell rings from the lift. Read the rule beside it.");scene(p,3);}
         if(number==3){say(p,"FUSE 3/3. The lights die. RUN BACK TO THE LIFT!");
+            ServerLevel w=(ServerLevel)p.level();
+            for(int x:new int[]{-263,-255,-247})w.setBlock(new BlockPos(x,90,99),Blocks.REDSTONE_TORCH.defaultBlockState(),2);
             spawn(p,-268,90,100,true);cue(p,LastElevator.RADIO.get());}
         return 1;
     }
     public static boolean pickup(ServerPlayer p,ItemStack item){
         if(!item.is(LastElevator.FUSE.get()))return false;
         int n=item.getTag()==null?0:item.getTag().getInt("FuseNumber");
-        if(n>0)fuse(p,n);
-        return true;
+        return n>0&&fuse(p,n)==1;
     }
     public static boolean click(ServerPlayer p,BlockPos pos){
         CompoundTag d=data(p);if(!d.getBoolean("running")||d.getBoolean("paused")||d.getInt("delay")>0)return false;
         if(d.getBoolean("liftMoving"))return true;
         int stage=d.getInt("scene");
+        if(pos.equals(new BlockPos(-251,90,101))&&stage==4){
+            if(!d.getBoolean("breakerKey")){
+                d.putBoolean("breakerKey",true);cue(p,LastElevator.ELECTRIC.get());
+                ItemStack key=new ItemStack(Items.TRIPWIRE_HOOK);key.setHoverName(Component.literal("Electrical room key"));
+                p.getInventory().add(key);say(p,"KEY RELEASED. Unlock the barred room beside the corridor.");
+            }
+            return true;
+        }
+        if(pos.getZ()==104&&pos.getX()>=-257&&pos.getX()<=-255
+                &&pos.getY()>=90&&pos.getY()<=92&&stage==4){
+            if(!d.getBoolean("breakerKey")){say(p,"Locked. Find the breaker key first.");return true;}
+            TokyoDirector.electricalDoor((ServerLevel)p.level(),false);
+            d.putBoolean("electricalOpen",true);cue(p,LastElevator.DOOR.get());
+            say(p,"Electrical room unlocked. Take the third fuse.");return true;
+        }
         // Real fuse panel, approached after returning from maintenance.
         if(pos.equals(new BlockPos(-255,85,100))&&stage==5){
             if(d.getInt("fuses")<3){say(p,"The panel needs all three fuses.");return true;}
             d.putBoolean("panelRestored",true);cue(p,LastElevator.ELECTRIC.get());
+            TokyoDirector.restorePanel(p);
+            for(int i=0;i<p.getInventory().getContainerSize();i++)
+                if(p.getInventory().getItem(i).is(LastElevator.FUSE.get()))p.getInventory().setItem(i,ItemStack.EMPTY);
             say(p,"POWER RESTORED. ONE PASSENGER MUST REMAIN. The service stairs are east of the lift.");
             spawn(p,-233,85,101,false);return true;
         }
@@ -207,13 +238,24 @@ public final class TowerStory {
         if(stage==4&&t==40){cue(p,LastElevator.RADIO.get());say(p,"The radio echoes something you said inside the lift...");}
         if(stage==5&&d.getBoolean("panelRestored")&&p.getX()>-239&&p.getZ()>103&&p.getY()<89)scene(p,6);
         if(stage==6){
-            if((p.getY()>=94&&!d.getBoolean("loop1"))||(p.getY()>=104&&!d.getBoolean("loop2"))){
-                boolean first=p.getY()<104;d.putBoolean(first?"loop1":"loop2",true);
+            if(p.getY()>=94&&!d.getBoolean("loop1")){
+                d.putBoolean("loop1",true);
+                ((ServerLevel)p.level()).setBlock(new BlockPos(-225,101,104),Blocks.AIR.defaultBlockState(),2);
+                cue(p,LastElevator.KNOCK.get());say(p,"The SAME landing again. One lamp has gone out.");
+            }
+            if(p.getY()>=104&&!d.getBoolean("loop2")){
+                d.putBoolean("loop2",true);
+                ((ServerLevel)p.level()).setBlock(new BlockPos(-225,106,104),Blocks.AIR.defaultBlockState(),2);
                 cue(p,LastElevator.KNOCK.get());say(p,"The SAME landing again. Another lamp has gone out.");
             }
             if(p.getY()>=115&&p.getX()<=-226)scene(p,7);
         }
-        if(stage==7&&!d.getBoolean("coldOpen")&&t==60){spawn(p,-259,115,100,true);say(p,"The Passenger is at the far end. Reach the emergency seal!");}
+        if(stage==7&&!d.getBoolean("coldOpen")&&!d.getBoolean("zeroSpawn")
+                &&(t>=60||p.getX()<=-247)){
+            d.putBoolean("zeroSpawn",true);
+            spawn(p,p.getX()<=-247?-265:-259,115,100,true);
+            say(p,"The Passenger is at the far end. Reach the emergency seal!");
+        }
         if(stage==7&&d.getBoolean("coldOpen")&&(t==1||t==16||t==31))cue(p,LastElevator.BELL.get());
         if(stage==8)return;
         if(stage==7&&d.getBoolean("sealOpen")&&p.getX()<=-289&&p.getY()<=68){
@@ -226,11 +268,22 @@ public final class TowerStory {
         d.putInt("fuses",0);d.putBoolean("panelRestored",false);d.putBoolean("sealOpen",false);
         d.putBoolean("loop1",false);d.putBoolean("loop2",false);
         d.putBoolean("coldOpen",false);
+        d.putBoolean("zeroSpawn",false);
+        d.putBoolean("breakerKey",false);d.putBoolean("electricalOpen",false);
         for(int i=1;i<=3;i++)d.putBoolean("fuse"+i,false);
         TowerLift.reset(p,d);TokyoDirector.seal((ServerLevel)p.level(),true);
+        TokyoDirector.electricalDoor((ServerLevel)p.level(),true);
+        TokyoDirector.resetPanel((ServerLevel)p.level());
+        ((ServerLevel)p.level()).setBlock(new BlockPos(-225,101,104),Blocks.OCHRE_FROGLIGHT.defaultBlockState(),2);
+        ((ServerLevel)p.level()).setBlock(new BlockPos(-225,106,104),Blocks.OCHRE_FROGLIGHT.defaultBlockState(),2);
         p.teleportTo((ServerLevel)p.level(),-254.5,75,107.5,0,0);
         for(int i=0;i<p.getInventory().getContainerSize();i++)
-            if(p.getInventory().getItem(i).is(LastElevator.FUSE.get()))p.getInventory().setItem(i,ItemStack.EMPTY);
+            if(p.getInventory().getItem(i).is(LastElevator.FUSE.get())
+                    ||(p.getInventory().getItem(i).is(Items.TRIPWIRE_HOOK)
+                    &&p.getInventory().getItem(i).hasCustomHoverName()
+                    &&p.getInventory().getItem(i).getHoverName().getString().equals("Electrical room key")))
+                p.getInventory().setItem(i,ItemStack.EMPTY);
+        for(int x:new int[]{-263,-255,-247})((ServerLevel)p.level()).setBlock(new BlockPos(x,90,99),Blocks.AIR.defaultBlockState(),2);
         say(p,"Take reset. Run /le setup, then /le auto 20.");return 1;
     }
     public static int skip(ServerPlayer p,int target){

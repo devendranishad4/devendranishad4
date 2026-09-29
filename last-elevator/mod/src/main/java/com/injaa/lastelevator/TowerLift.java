@@ -57,6 +57,16 @@ public final class TowerLift {
             put(w,x,74,z,(x+z)%8==0?Blocks.CHISELED_QUARTZ_BLOCK:
                     (z==108||z==109?Blocks.POLISHED_DEEPSLATE:Blocks.POLISHED_DIORITE));
         }
+        // Rebuild the south facade opened by the new lounge; glass and a
+        // street-to-lobby stair replace the original room partitions.
+        for(int x=-269;x<=-241;x++)for(int y=75;y<=83;y++)
+            put(w,x,y,113,y==75||y==83||x%6==0?Blocks.SMOOTH_QUARTZ:Blocks.BLACK_STAINED_GLASS);
+        fill(w,-256,75,113,-253,78,113,Blocks.AIR);
+        for(int z=114;z<=122;z++){
+            int floor=74-(z-113);
+            fill(w,-256,floor,z,-253,floor,z,Blocks.POLISHED_DIORITE);
+            fill(w,-256,floor+1,z,-253,floor+3,z,Blocks.AIR);
+        }
         for(int x:new int[]{-268,-257,-245})for(int z:new int[]{105,112}){
             fill(w,x,75,z,x+1,82,z+1,Blocks.SMOOTH_QUARTZ);
             fill(w,x,75,z,x+1,75,z+1,Blocks.POLISHED_BLACKSTONE);
@@ -98,6 +108,7 @@ public final class TowerLift {
             int y=84+loop*5+(i*5)/16;
             put(w,path[i][0],y,path[i][1],Blocks.POLISHED_BLACKSTONE);
         }
+        put(w,-225,114,103,Blocks.POLISHED_BLACKSTONE);
         // Walkway from the office corridor around the lift shaft.
         fill(w,-239,84,105,-225,84,105,Blocks.POLISHED_BLACKSTONE);
         fill(w,-239,85,105,-225,87,105,Blocks.AIR);
@@ -119,16 +130,16 @@ public final class TowerLift {
         fill(w,-279,74,99,-275,119,103,Blocks.AIR);
         fill(w,-278,74,100,-276,119,102,Blocks.TINTED_GLASS);
         int[][] path=ring(-279,-275,99,103);
-        for(int loop=0;loop<8;loop++)for(int i=0;i<16;i++){
-            int y=74+loop*5+(i*5)/16;
-            put(w,path[i][0],y,path[i][1],Blocks.POLISHED_BLACKSTONE);
+        for(int step=0;step<=128;step++){
+            int[] at=path[(7+step)%16];
+            put(w,at[0],114-(step*5)/16,at[1],Blocks.POLISHED_BLACKSTONE);
         }
         // Top entrance opens after the emergency seal is broken.
         fill(w,-274,114,100,-272,114,101,Blocks.SMOOTH_QUARTZ);
         fill(w,-274,115,100,-272,117,101,Blocks.AIR);
         // At ground level a short outdoor descent reaches existing street height.
-        fill(w,-282,74,100,-280,74,101,Blocks.POLISHED_BLACKSTONE);
-        fill(w,-282,75,100,-280,77,101,Blocks.AIR);
+        fill(w,-282,74,100,-275,74,100,Blocks.POLISHED_BLACKSTONE);
+        fill(w,-282,75,100,-275,77,100,Blocks.AIR);
         for(int x=-283;x>=-291;x--){
             int floor=74-(Math.abs(x+282));
             fill(w,x,floor,100,x,floor,101,Blocks.POLISHED_BLACKSTONE);
@@ -161,11 +172,17 @@ public final class TowerLift {
             put(w,X0,y,z,closed?Blocks.IRON_BLOCK:Blocks.AIR);
         }
     }
+    private static void shutter(ServerLevel w,int floor,int z,boolean closed){
+        for(int y=floor+1;y<=floor+3;y++){
+            put(w,-236,y,z,closed?Blocks.IRON_BLOCK:Blocks.AIR);
+            put(w,X0,y,z,closed?Blocks.IRON_BLOCK:Blocks.AIR);
+        }
+    }
     public static void begin(ServerPlayer p,CompoundTag d,int target,int targetScene){
         int floor=d.getInt("carFloor");
         if(!inside(p,floor))return;
-        door((ServerLevel)p.level(),floor,true);
         d.putBoolean("liftMoving",true);d.putInt("liftTicks",0);
+        d.putInt("arrivalTick",0);
         d.putInt("liftTarget",target);d.putInt("liftScene",targetScene);
         p.setDeltaMovement(0,0,0);
     }
@@ -174,9 +191,12 @@ public final class TowerLift {
         if(!d.getBoolean("liftMoving"))return -1;
         ServerLevel w=(ServerLevel)p.level();int ticks=d.getInt("liftTicks")+1;
         d.putInt("liftTicks",ticks);
-        if(ticks<=20||ticks%5!=0)return -1;
+        if(ticks==1)shutter(w,d.getInt("carFloor"),100,true);
+        if(ticks==9)shutter(w,d.getInt("carFloor"),101,true);
+        if(ticks<=20)return -1;
         int floor=d.getInt("carFloor"),target=d.getInt("liftTarget");
         if(floor!=target){
+            if(ticks%5!=0)return -1;
             // Adjacent cabin volumes overlap; clear the old one before drawing the new.
             fill(w,X0,floor,Z0,X1,floor+4,Z1,Blocks.AIR);
             int next=floor+(target>floor?1:-1);
@@ -184,16 +204,22 @@ public final class TowerLift {
             p.teleportTo(w,p.getX(),p.getY()+(next-floor),p.getZ(),p.getYRot(),p.getXRot());
             p.setDeltaMovement(0,0,0);p.fallDistance=0;
             d.putInt("carFloor",next);
+            if(next%5==4)p.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    "LIFT FLOOR "+((next-74)/5)),true);
+            if(next==target)d.putInt("arrivalTick",ticks);
             return -1;
         }
-        if(ticks<45+Math.abs(target-MIN)*5)return -1;
-        door(w,target,false);
+        int arrived=ticks-d.getInt("arrivalTick");
+        if(arrived==8)shutter(w,target,101,false);
+        if(arrived<16)return -1;
+        shutter(w,target,100,false);
         d.putBoolean("liftMoving",false);
         return d.getInt("liftScene");
     }
     public static void reset(ServerPlayer p,CompoundTag d){
         ServerLevel w=(ServerLevel)p.level();int floor=d.getInt("carFloor");
         fill(w,X0,floor,Z0,X1,floor+4,Z1,Blocks.AIR);
+        door(w,floor,true);
         car(w,MIN,false);door(w,MIN,false);
         d.putInt("carFloor",MIN);d.putBoolean("liftMoving",false);
     }

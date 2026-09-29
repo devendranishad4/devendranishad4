@@ -231,7 +231,7 @@ public class LastElevator {
     }
     private void pickup(EntityItemPickupEvent e){
         if(!(e.getEntity() instanceof ServerPlayer p)||!e.getItem().getItem().is(FUSE.get()))return;
-        if(state(p).getInt("towerVersion")>=4){TowerStory.pickup(p,e.getItem().getItem());return;}
+        if(state(p).getInt("towerVersion")>=4){if(!TowerStory.pickup(p,e.getItem().getItem()))e.setCanceled(true);return;}
         int number=e.getItem().getItem().getTag()==null?0:e.getItem().getItem().getTag().getInt("FuseNumber");
         if(number>0)giveFuse(p,number);
     }
