@@ -100,8 +100,8 @@ for cz in range((S.d+15)//16):
         sector+=count
 (REGION/'r.0.0.mca').write_bytes(header+payload)
 
-# Use 1.20.1 metadata as a skeleton, then replace all world identity/terrain.
-source=Path(__file__).resolve().parents[1]/'world/Tokyo Inspired City 1.0.10/level.dat'
+# Use the sanitized 1.20.1 metadata template bundled with this builder.
+source=ROOT/'level_template.dat'
 level=load(source)
 d=level['Data']
 d.pop('Player',None)
