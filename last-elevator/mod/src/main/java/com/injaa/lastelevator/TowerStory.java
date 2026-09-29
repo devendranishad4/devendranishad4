@@ -90,7 +90,8 @@ public final class TowerStory {
         if(target==6){say(p,"The staircase keeps returning to the same landing.");cue(p,LastElevator.KNOCK.get());}
         if(target==7){TokyoDirector.employee(p);say(p,"FLOOR 0. That is your name on the employee board.");cue(p,LastElevator.STING.get());}
         if(target==8){((ServerLevel)p.level()).setDayTime(1000);TokyoDirector.operator(p);
-            cue(p,LastElevator.BELL.get());say(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());}
+            cue(p,LastElevator.BELL.get());say(p,"NIGHT OPERATOR: "+p.getGameProfile().getName());
+            d.putBoolean("running",false);}
     }
     private static void dropFuse(ServerLevel w,BlockPos pos,int number){
         w.getChunkAt(pos);

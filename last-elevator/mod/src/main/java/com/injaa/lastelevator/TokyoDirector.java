@@ -1,12 +1,14 @@
 package com.injaa.lastelevator;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
 
@@ -22,6 +24,16 @@ public final class TokyoDirector {
     private static void sign(ServerLevel w,int x,int y,int z,String... lines){
         BlockPos p=new BlockPos(x,y,z);
         w.setBlock(p,Blocks.OAK_SIGN.defaultBlockState(),2);
+        if(w.getBlockEntity(p) instanceof SignBlockEntity sign){
+            var text=sign.getFrontText();
+            for(int i=0;i<Math.min(lines.length,4);i++)text=text.setMessage(i,Component.literal(lines[i]));
+            sign.setText(text,true);sign.setChanged();
+            w.sendBlockUpdated(p,w.getBlockState(p),w.getBlockState(p),3);
+        }
+    }
+    private static void wallSign(ServerLevel w,int x,int y,int z,String... lines){
+        BlockPos p=new BlockPos(x,y,z);
+        w.setBlock(p,Blocks.OAK_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING,Direction.WEST),2);
         if(w.getBlockEntity(p) instanceof SignBlockEntity sign){
             var text=sign.getFrontText();
             for(int i=0;i<Math.min(lines.length,4);i++)text=text.setMessage(i,Component.literal(lines[i]));
@@ -57,6 +69,7 @@ public final class TokyoDirector {
         }
         // Readable clues and floor indicators sit next to the actual lifts.
         sign(w,-247,75,101,"NIGHT SHIFT","11:47 PM","Floor 6: panel","3 fuses missing");
+        sign(w,-250,75,105,"LIFT EAST","FOLLOW THE","LIT CORRIDOR","");
         sign(w,-240,75,102,"LIFT","Press button","inside car","");
         sign(w,-255,85,102,"MAINTENANCE","FUSES 0 / 3","Find all three","Return here");
         for(int x:new int[]{-257,-255,-253})set(w,x,88,102,Blocks.POLISHED_BLACKSTONE);
@@ -109,7 +122,9 @@ public final class TokyoDirector {
     }
     public static void operator(ServerPlayer p){
         String name=p.getGameProfile().getName();
-        sign((ServerLevel)p.level(),-292,66,102,"TOWER DIRECTORY","NIGHT OPERATOR",name,"");
+        ServerLevel w=(ServerLevel)p.level();
+        fill(w,-283,66,99,-283,70,103,Blocks.POLISHED_BLACKSTONE);
+        wallSign(w,-284,68,101,"TOWER DIRECTORY","NIGHT OPERATOR",name,"");
     }
     public static void restorePanel(ServerPlayer p){
         ServerLevel w=(ServerLevel)p.level();
