@@ -1,4 +1,4 @@
-# The Last Elevator — 0.4.0 preview rebuild
+# The Last Elevator — 0.4.1 preview rebuild
 
 Minecraft Java 1.20.1, Forge 47.4.20, Java 17. Use a **copy** of the supplied Tokyo Inspired City 1.0.10 world. The original 0.3.1 prototype was rejected in a real player test: its lift was static, stages visibly teleported the player, fuses were handed out by a timer, and the scares could occur off camera. Do not film the 0.3.1 build.
 
