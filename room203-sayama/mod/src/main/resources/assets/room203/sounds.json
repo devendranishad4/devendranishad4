@@ -1,0 +1,74 @@
+{
+  "rain": {
+    "sounds": [
+      {
+        "name": "room203:rain",
+        "stream": true
+      }
+    ],
+    "subtitle": "subtitles.room203.rain"
+  },
+  "hall": {
+    "sounds": [
+      {
+        "name": "room203:hall",
+        "stream": true
+      }
+    ],
+    "subtitle": "subtitles.room203.hall"
+  },
+  "knock": {
+    "sounds": [
+      {
+        "name": "room203:knock",
+        "stream": false
+      }
+    ],
+    "subtitle": "subtitles.room203.knock"
+  },
+  "steps": {
+    "sounds": [
+      {
+        "name": "room203:steps",
+        "stream": false
+      }
+    ],
+    "subtitle": "subtitles.room203.steps"
+  },
+  "breath": {
+    "sounds": [
+      {
+        "name": "room203:breath",
+        "stream": false
+      }
+    ],
+    "subtitle": "subtitles.room203.breath"
+  },
+  "fault": {
+    "sounds": [
+      {
+        "name": "room203:fault",
+        "stream": false
+      }
+    ],
+    "subtitle": "subtitles.room203.fault"
+  },
+  "sting": {
+    "sounds": [
+      {
+        "name": "room203:sting",
+        "stream": false
+      }
+    ],
+    "subtitle": "subtitles.room203.sting"
+  },
+  "pursuit": {
+    "sounds": [
+      {
+        "name": "room203:pursuit",
+        "stream": true
+      }
+    ],
+    "subtitle": "subtitles.room203.pursuit"
+  }
+}

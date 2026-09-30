@@ -1,0 +1,49 @@
+name: Room 203 Sayama release
+on:
+  push:
+    branches: [codex/room203-sayama]
+    paths: ['room203-sayama/**', '.github/workflows/room203-sayama.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+      - name: Original assets
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python3 -m pip install numpy Pillow
+          python3 room203-sayama/generate_assets.py
+      - name: Compile release and run Forge integration test
+        working-directory: room203-sayama/mod
+        run: |
+          mkdir -p run
+          echo 'eula=true' > run/eula.txt
+          gradle --no-daemon build runGameTestServer
+      - name: Release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Room203-Sayama-Forge-1.20.1
+          path: |
+            room203-sayama/mod/build/libs/*.jar
+            room203-sayama/README.md
+            room203-sayama/SCRIPT.md
+      - name: Test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Room203-test-logs
+          path: |
+            room203-sayama/mod/run/logs/**
+            room203-sayama/mod/build/reports/**

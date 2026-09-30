@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+[[mods]]
+modId="room203"
+version="1.0.0"
+displayName="Room 203 — Sayama Horror Director"
+description="A location-aware, resettable apartment horror episode for the original Sayama v0.3 world."
+[[dependencies.room203]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.room203]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"
