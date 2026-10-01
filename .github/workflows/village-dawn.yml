@@ -1,0 +1,46 @@
+name: Village Dawn Forge build
+on:
+  push:
+    branches: [codex/village-dawn]
+    paths: ['village-dawn/**', '.github/workflows/village-dawn.yml']
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate textures, original SFX and rehearsal voices
+        working-directory: village-dawn
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg espeak-ng
+          python -m pip install pillow nbtlib numpy
+          python make_assets.py
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+      - name: Compile Forge addon
+        working-directory: village-dawn/mod
+        run: gradle build --stacktrace
+      - name: Run dedicated-server GameTests
+        working-directory: village-dawn/mod
+        run: gradle runGameTestServer --stacktrace
+      - name: Package generated resource assets
+        run: |
+          cd village-dawn/mod/src/main/resources
+          zip -qr "$GITHUB_WORKSPACE/village-dawn-assets.zip" assets data
+      - uses: actions/upload-artifact@v4
+        with:
+          name: village-dawn-forge-1.20.1
+          path: |
+            village-dawn/mod/build/libs/*.jar
+            village-dawn-assets.zip
+          if-no-files-found: error

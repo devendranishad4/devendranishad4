@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+[[mods]]
+modId="villagedawn"
+version="0.1.0-rehearsal"
+displayName="Village Dawn Director"
+description="Rehearsal director for Injaa's Village That Disappears at Sunrise."
+[[dependencies.villagedawn]]
+modId="forge"
+mandatory=true
+versionRange="[47.4.20,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.villagedawn]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"
