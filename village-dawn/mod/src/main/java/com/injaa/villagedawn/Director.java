@@ -33,9 +33,9 @@ public class Director {
     static {
         DEFAULTS.put("start",new BlockPos(65,73,-45));DEFAULTS.put("entrance",new BlockPos(83,76,-143));
         DEFAULTS.put("square",new BlockPos(110,75,-136));DEFAULTS.put("elder",new BlockPos(109,75,-138));
-        DEFAULTS.put("room",new BlockPos(53,79,-123));DEFAULTS.put("watcher",new BlockPos(30,75,-155));
+        DEFAULTS.put("room",new BlockPos(53,79,-123));DEFAULTS.put("hall",new BlockPos(54,79,-128));DEFAULTS.put("watcher",new BlockPos(30,75,-155));
         DEFAULTS.put("forge",new BlockPos(170,74,-110));DEFAULTS.put("church",new BlockPos(118,76,-105));
-        DEFAULTS.put("ledger",new BlockPos(118,76,-117));DEFAULTS.put("bell",new BlockPos(118,76,-104));
+        DEFAULTS.put("ledger",new BlockPos(118,76,-117));DEFAULTS.put("bell",new BlockPos(118,76,-104));DEFAULTS.put("pursuit",new BlockPos(118,76,-97));
         DEFAULTS.put("rope",new BlockPos(52,79,-122));DEFAULTS.put("pin",new BlockPos(169,74,-110));
         DEFAULTS.put("loop",new BlockPos(65,73,-45));DEFAULTS.put("exit",new BlockPos(35,72,33));
     }
@@ -57,6 +57,7 @@ public class Director {
     static boolean check(ServerPlayer p){
         boolean ok=true;CompoundTag d=state(p.serverLevel());
         for(String k:DEFAULTS.keySet()){
+            if(d.getBoolean("prepared")&&List.of("rope","pin","bell","ledger").contains(k))continue;
             if(!safe(p.serverLevel(),pos(d,k))){say(p,"Check marker "+k+" at "+pos(d,k).toShortString()+". Stand in the correct clear location and /vd mark "+k);ok=false;}
         }
         if(ok)say(p,"Marker floor/headroom checks passed. Walk the route before filming.");return ok;
@@ -64,7 +65,7 @@ public class Director {
     static void teleport(ServerPlayer p,String key){BlockPos b=pos(state(p.serverLevel()),key);if(safe(p.serverLevel(),b))p.teleportTo(p.serverLevel(),b.getX()+.5,b.getY(),b.getZ()+.5,key.equals("start")?180:p.getYRot(),0);else say(p,"Unsafe destination: "+key);}
     static void sfx(ServerPlayer p,String marker,SoundEvent e,float volume,float pitch){
         CompoundTag d=state(p.serverLevel());BlockPos b=pos(d,marker);
-        float scale=d.contains("volume")?d.getFloat("volume"):1;
+        String category=(e==VillageDawn.ELDER.get()||e==VillageDawn.FALSE_ELDER.get()||e==VillageDawn.IMITATION.get())?"voiceVolume":(e==VillageDawn.BREATH.get()?"ambienceVolume":"scareVolume");float scale=(d.contains("volume")?d.getFloat("volume"):1)*(d.contains(category)?d.getFloat(category):1);
         p.serverLevel().playSound(null,b,e,SoundSource.BLOCKS,volume*scale,pitch);
     }
     /** Remember only individual changed blocks, including any block-entity contents. */
@@ -98,7 +99,7 @@ public class Director {
         BlockPos b=pos(d,marker);if(!safe(l,b)){say(p,"Caller marker blocked: "+marker);return null;}
         if(c==null){c=VillageDawn.CALLER.get().create(l);if(c==null)return null;c.addTag(TAG);c.moveTo(b.getX()+.5,b.getY(),b.getZ()+.5,0,0);l.addFreshEntity(c);track(l,c);d.putUUID("caller",c.getUUID());}
         else c.moveTo(b.getX()+.5,b.getY(),b.getZ()+.5,0,0);
-        c.direct(p.getUUID(),chasing);c.setInvulnerable(true);dirty(l);return c;
+        float yaw=(float)(Math.atan2(p.getZ()-c.getZ(),p.getX()-c.getX())*180/Math.PI)-90;c.setYRot(yaw);c.setYHeadRot(yaw);c.setYBodyRot(yaw);c.direct(p.getUUID(),chasing);c.setInvulnerable(true);dirty(l);return c;
     }
     static void hideCaller(ServerLevel l){CompoundTag d=state(l);if(d.hasUUID("caller")){Entity e=l.getEntity(d.getUUID("caller"));if(e!=null)e.discard();d.remove("caller");}}
     static ItemStack named(Item item,String name){ItemStack s=new ItemStack(item);s.setHoverName(Component.literal(name));s.getOrCreateTag().putBoolean("VillageDawn",true);return s;}
@@ -154,14 +155,14 @@ public class Director {
             if(stage==0){if(cue(d,0,0))objective(p,"Follow the forest path to the village square.");if(near(p,pos(d,"square"),8))d.putBoolean("done",true);}
             if(stage==1){if(cue(d,0,0))objective(p,"Speak to the elder beside the square (right-click).");}
             if(stage==2){if(cue(d,0,0))objective(p,"Find the guest room across the bridge.");if(near(p,pos(d,"room"),4)){if(cue(d,1,0)){caller(p,"watcher",false);subtitle(p,"Someone is watching from a nearby house...");sfx(p,"watcher",VillageDawn.BREATH.get(),.6f,1);}d.putBoolean("done",true);}}
-            if(stage==3){if(cue(d,0,0)){sfx(p,"bell",SoundEvents.BELL_BLOCK,1.8f,.8f);caller(p,"room",false);for(Tag resident:d.getList("residents",Tag.TAG_COMPOUND)){Entity en=l.getEntity(((CompoundTag)resident).getUUID("uuid"));if(en instanceof Villager v)v.setInvisible(true);}subtitle(p,"The first bell. Do not open the door.");}if(cue(d,1,12))sfx(p,"room",VillageDawn.KNOCK.get(),1,1);if(cue(d,2,18)){sfx(p,"room",VillageDawn.FALSE_ELDER.get(),1,1);subtitle(p,"Beta, neeche aa jao. Tumhein doosra kamra dikhana hai.");}if(cue(d,3,34)){sfx(p,"room",VillageDawn.FALSE_ELDER.get(),1,1);subtitle(p,"The SAME sentence. The SAME voice.");}if(cue(d,4,55)){hideCaller(l);objective(p,"The footsteps stop. Leave and try the forest road.");}d.putBoolean("done",true);}
+            if(stage==3){if(cue(d,0,0)){sfx(p,"bell",SoundEvents.BELL_BLOCK,1.8f,.8f);caller(p,"hall",false);for(Tag resident:d.getList("residents",Tag.TAG_COMPOUND)){Entity en=l.getEntity(((CompoundTag)resident).getUUID("uuid"));if(en instanceof Villager v)v.setInvisible(true);}subtitle(p,"The first bell. Do not open the door.");}if(cue(d,1,12))sfx(p,"room",VillageDawn.KNOCK.get(),1,1);if(cue(d,2,18)){sfx(p,"room",VillageDawn.FALSE_ELDER.get(),1,1);subtitle(p,"Beta, neeche aa jao. Tumhein doosra kamra dikhana hai.");}if(cue(d,3,34)){sfx(p,"room",VillageDawn.FALSE_ELDER.get(),1,1);subtitle(p,"The SAME sentence. The SAME voice.");}if(cue(d,4,55)){hideCaller(l);objective(p,"The footsteps stop. Leave and try the forest road.");}d.putBoolean("done",true);}
             if(stage==4){if(cue(d,0,0))objective(p,"Try the forest road you came from.");if(near(p,pos(d,"loop"),5)&&!d.getBoolean("done")){p.addEffect(new MobEffectInstance(MobEffects.DARKNESS,30,0,false,false));teleport(p,"entrance");sfx(p,"entrance",VillageDawn.STING.get(),.6f,1);subtitle(p,"The road returned you to the SAME village.");d.putBoolean("done",true);}}
             if(stage==5){if(cue(d,0,0))objective(p,"Find the bell keeper's ledger in the church. Right-click the lectern.");}
             if(stage==6){if(cue(d,0,0))objective(p,"Inspect the bell. The rope and fixing pin are missing.");if(cue(d,1,15))subtitle(p,"Rope: guest-room loft. Pin: forge. THREE rings open the road.");if(near(p,pos(d,"church"),6))d.putBoolean("done",true);}
             if(stage==7){if(cue(d,0,0))objective(p,"Retrieve the Bell Rope from the guest-room barrel.");if(has(p,VillageDawn.ROPE.get())){if(cue(d,1,0)){sfx(p,"room",VillageDawn.FALSE_ELDER.get(),1,.92f);subtitle(p,"Beta, neeche aa jao...");}d.putBoolean("done",true);}}
             if(stage==8){if(cue(d,0,0))objective(p,"Retrieve the Fixing Pin from the forge barrel.");if(has(p,VillageDawn.PIN.get())){if(cue(d,1,0)){sfx(p,"forge",VillageDawn.IMITATION.get(),1,1);subtitle(p,"Ek bed mil jaaye toh subah nikal jaaunga... [voice-copy cue]");caller(p,"forge",false);}d.putBoolean("done",true);}}
             if(stage==9){if(cue(d,0,0))objective(p,"Return to the church. Right-click the bell to fit BOTH items.");if(d.getBoolean("ropeFitted")&&d.getBoolean("pinFitted"))d.putBoolean("done",true);}
-            if(stage==10){if(cue(d,0,0))objective(p,"Ring the repaired bell THREE times. Then run to the forest exit.");if(d.getInt("rings")==3){advance(p);d=state(l);d.putInt("escapeTicks",1800);Caller c=caller(p,"church",true);if(c!=null)sfx(p,"church",VillageDawn.ROAR.get(),1.4f,1);subtitle(p,"90 SECONDS. Square → bridge → forest → exit.");}}
+            if(stage==10){if(cue(d,0,0))objective(p,"Ring the repaired bell THREE times. Then run to the forest exit.");if(d.getInt("rings")==3){advance(p);d=state(l);d.putInt("escapeTicks",1800);Caller c=caller(p,"pursuit",true);if(c!=null)sfx(p,"church",VillageDawn.ROAR.get(),1.4f,1);subtitle(p,"90 SECONDS. Square → bridge → forest → exit.");}}
             if(stage==11){
                 int left=d.getInt("escapeTicks")-1;d.putInt("escapeTicks",left);
                 if(left%100==0)subtitle(p,"Escape: "+Math.max(0,left/20)+" seconds");
@@ -195,6 +196,10 @@ public class Director {
             else subtitle(p,"The bell mechanism is not ready.");dirty(l);
         }
     }
+    @SubscribeEvent public void breakProp(net.minecraftforge.event.level.BlockEvent.BreakEvent e){
+        if(!(e.getLevel() instanceof ServerLevel l)||!state(l).getBoolean("prepared"))return;
+        for(String k:List.of("rope","pin","bell","ledger"))if(e.getPos().equals(pos(state(l),k))){e.setCanceled(true);return;}
+    }
     @SubscribeEvent public void commands(RegisterCommandsEvent e){
         var root=Commands.literal("vd").requires(s->s.hasPermission(2));
         root.then(Commands.literal("help").executes(c->{say(c.getSource().getPlayerOrException(),"/vd prepare | check | auto [10/15/20] | pause | resume | status | reset | mark NAME | goto NAME | pace 1..10 | volume 0..1 | retrychase");return 1;}));
@@ -206,12 +211,13 @@ public class Director {
             case "resume"-> {pause(p,false);say(p,"Resumed.");}
             case "status"-> {int s=d.getInt("stage");say(p,"Prepared="+d.getBoolean("prepared")+", running="+d.getBoolean("running")+", paused="+d.getBoolean("paused")+", scene="+(s>=0&&s<NAMES.length?NAMES[s]:s)+", scene seconds="+d.getInt("ticks")/20+", pace="+d.getInt("pace")+", rings="+d.getInt("rings"));}
             case "reset"-> {d.putBoolean("running",false);restore(p.serverLevel());CompoundTag markers=d.getCompound("markers").copy();StoryData.get(p.serverLevel()).data=new CompoundTag();state(p.serverLevel()).put("markers",markers);for(int i=0;i<p.getInventory().getContainerSize();i++){ItemStack stack=p.getInventory().getItem(i);if(stack.hasTag()&&stack.getTag().getBoolean("VillageDawn"))p.getInventory().setItem(i,ItemStack.EMPTY);}say(p,"Reset restored changed blocks and resident flags. /vd prepare to repeat.");}
-            case "retrychase"-> {if(!d.getBoolean("prepared")||d.getInt("stage")<11){say(p,"Only available after reaching the chase.");return 0;}hideCaller(p.serverLevel());teleport(p,"church");d.putInt("stage",11);d.putInt("ticks",0);d.putInt("flags",0);d.putInt("escapeTicks",1800);d.putBoolean("running",true);d.putBoolean("paused",false);caller(p,"church",true);say(p,"Chase take restarted. Exit marker remains the target.");}
+            case "retrychase"-> {if(!d.getBoolean("prepared")||d.getInt("stage")<11){say(p,"Only available after reaching the chase.");return 0;}hideCaller(p.serverLevel());teleport(p,"church");d.putInt("stage",11);d.putInt("ticks",0);d.putInt("flags",0);d.putInt("escapeTicks",1800);d.putBoolean("running",true);d.putBoolean("paused",false);caller(p,"pursuit",true);say(p,"Chase take restarted. Exit marker remains the target.");}
         }dirty(p.serverLevel());return 1;}));
         root.then(Commands.literal("mark").then(Commands.argument("name",StringArgumentType.word()).suggests((c,b)->SharedSuggestionProvider.suggest(DEFAULTS.keySet(),b)).executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();String k=StringArgumentType.getString(c,"name");CompoundTag d=state(p.serverLevel());if(!owner(p)||d.getBoolean("prepared")){say(p,"Reset before changing markers.");return 0;}if(!DEFAULTS.containsKey(k)||!safe(p.serverLevel(),p.blockPosition())){say(p,"Unknown name or unsafe player position.");return 0;}CompoundTag m=d.getCompound("markers");m.putLong(k,p.blockPosition().asLong());d.put("markers",m);dirty(p.serverLevel());say(p,"Marked "+k+" at "+p.blockPosition().toShortString());return 1;})));
         root.then(Commands.literal("goto").then(Commands.argument("name",StringArgumentType.word()).suggests((c,b)->SharedSuggestionProvider.suggest(DEFAULTS.keySet(),b)).executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();String k=StringArgumentType.getString(c,"name");if(!DEFAULTS.containsKey(k)){say(p,"Unknown marker.");return 0;}teleport(p,k);return 1;})));
         root.then(Commands.literal("pace").then(Commands.argument("speed",IntegerArgumentType.integer(1,10)).executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();if(!owner(p))return 0;state(p.serverLevel()).putInt("pace",IntegerArgumentType.getInteger(c,"speed"));dirty(p.serverLevel());say(p,"Pace changed. 1 = filming, 10 = rehearsal. Chase always uses real 90 seconds.");return 1;})));
         root.then(Commands.literal("volume").then(Commands.argument("value",FloatArgumentType.floatArg(0,1)).executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();if(!owner(p))return 0;state(p.serverLevel()).putFloat("volume",FloatArgumentType.getFloat(c,"value"));dirty(p.serverLevel());return 1;})));
+        root.then(Commands.literal("mix").then(Commands.argument("channel",StringArgumentType.word()).suggests((c,b)->SharedSuggestionProvider.suggest(List.of("voice","ambience","scare"),b)).then(Commands.argument("value",FloatArgumentType.floatArg(0,1)).executes(c->{ServerPlayer p=c.getSource().getPlayerOrException();if(!owner(p))return 0;String channel=StringArgumentType.getString(c,"channel");if(!List.of("voice","ambience","scare").contains(channel))return 0;state(p.serverLevel()).putFloat(channel+"Volume",FloatArgumentType.getFloat(c,"value"));dirty(p.serverLevel());return 1;}))));
         e.getDispatcher().register(root);
     }
 }
