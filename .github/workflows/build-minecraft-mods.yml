@@ -34,25 +34,20 @@ jobs:
               minecraft-mod-builds/light.parts/part03 \
               minecraft-mod-builds/light.parts/part04 \
             | base64 -d > /tmp/light.zip
-          cat minecraft-mod-builds/phone.parts/part00 \
-              minecraft-mod-builds/phone.parts/part01 \
-              minecraft-mod-builds/phone.parts/part02 \
-              minecraft-mod-builds/phone.parts/part03 \
-              minecraft-mod-builds/phone.parts/part04 \
-              minecraft-mod-builds/phone.parts/part05 \
-              minecraft-mod-builds/phone.parts/part06 \
+          cat minecraft-mod-builds/phone-clean.parts/part00 \
+              minecraft-mod-builds/phone-clean.parts/part01 \
             | base64 -d > /tmp/phone.zip
           unzip -q /tmp/light.zip -d /tmp/light-src
           unzip -q /tmp/phone.zip -d /tmp/phone-src
           test -f /tmp/light-src/LightDirectorRemote_Source/build.gradle
-          test -f /tmp/phone-src/PhoneV3_Addon_Source/build.gradle
+          test -f /tmp/phone-src/PhoneV3_Clean_Source/build.gradle
 
       - name: Build Light Director Remote
         working-directory: /tmp/light-src/LightDirectorRemote_Source
         run: gradle build --stacktrace
 
       - name: Build Advanced Phone V3
-        working-directory: /tmp/phone-src/PhoneV3_Addon_Source
+        working-directory: /tmp/phone-src/PhoneV3_Clean_Source
         run: gradle build --stacktrace
 
       - name: Collect JARs
@@ -60,7 +55,7 @@ jobs:
         run: |
           mkdir -p /tmp/jars
           cp /tmp/light-src/LightDirectorRemote_Source/build/libs/*.jar /tmp/jars/
-          cp /tmp/phone-src/PhoneV3_Addon_Source/build/libs/*.jar /tmp/jars/
+          cp /tmp/phone-src/PhoneV3_Clean_Source/build/libs/*.jar /tmp/jars/
           ls -lh /tmp/jars
 
       - name: Upload JARs
