@@ -28,7 +28,12 @@ jobs:
       - name: Reconstruct source archives
         shell: bash
         run: |
-          base64 -d minecraft-mod-builds/light-director-source.zip.b64 > /tmp/light.zip
+          cat minecraft-mod-builds/light.parts/part00 \
+              minecraft-mod-builds/light.parts/part01 \
+              minecraft-mod-builds/light.parts/part02 \
+              minecraft-mod-builds/light.parts/part03 \
+              minecraft-mod-builds/light.parts/part04 \
+            | base64 -d > /tmp/light.zip
           cat minecraft-mod-builds/phone.parts/part00 \
               minecraft-mod-builds/phone.parts/part01 \
               minecraft-mod-builds/phone.parts/part02 \
@@ -64,5 +69,3 @@ jobs:
           name: Minecraft-Mod-JARs
           path: /tmp/jars/*.jar
           if-no-files-found: error
-
-# Sources are reconstructed from committed archive parts before every build.
