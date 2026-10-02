@@ -64,3 +64,5 @@ jobs:
           name: Minecraft-Mod-JARs
           path: /tmp/jars/*.jar
           if-no-files-found: error
+
+# Sources are reconstructed from committed archive parts before every build.
