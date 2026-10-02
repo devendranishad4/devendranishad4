@@ -1,0 +1,66 @@
+name: Build Minecraft Mods
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'minecraft-mod-builds/**'
+      - '.github/workflows/build-minecraft-mods.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.8
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+
+      - name: Reconstruct source archives
+        shell: bash
+        run: |
+          base64 -d minecraft-mod-builds/light-director-source.zip.b64 > /tmp/light.zip
+          cat minecraft-mod-builds/phone.parts/part00 \
+              minecraft-mod-builds/phone.parts/part01 \
+              minecraft-mod-builds/phone.parts/part02 \
+              minecraft-mod-builds/phone.parts/part03 \
+              minecraft-mod-builds/phone.parts/part04 \
+              minecraft-mod-builds/phone.parts/part05 \
+              minecraft-mod-builds/phone.parts/part06 \
+            | base64 -d > /tmp/phone.zip
+          unzip -q /tmp/light.zip -d /tmp/light-src
+          unzip -q /tmp/phone.zip -d /tmp/phone-src
+          test -f /tmp/light-src/LightDirectorRemote_Source/build.gradle
+          test -f /tmp/phone-src/PhoneV3_Addon_Source/build.gradle
+
+      - name: Build Light Director Remote
+        working-directory: /tmp/light-src/LightDirectorRemote_Source
+        run: gradle build --stacktrace
+
+      - name: Build Advanced Phone V3
+        working-directory: /tmp/phone-src/PhoneV3_Addon_Source
+        run: gradle build --stacktrace
+
+      - name: Collect JARs
+        shell: bash
+        run: |
+          mkdir -p /tmp/jars
+          cp /tmp/light-src/LightDirectorRemote_Source/build/libs/*.jar /tmp/jars/
+          cp /tmp/phone-src/PhoneV3_Addon_Source/build/libs/*.jar /tmp/jars/
+          ls -lh /tmp/jars
+
+      - name: Upload JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Minecraft-Mod-JARs
+          path: /tmp/jars/*.jar
+          if-no-files-found: error
