@@ -39,6 +39,7 @@ jobs:
             | base64 -d > /tmp/phone.zip
           unzip -q /tmp/light.zip -d /tmp/light-src
           unzip -q /tmp/phone.zip -d /tmp/phone-src
+          cp minecraft-mod-builds/phone-overrides/build.gradle /tmp/phone-src/PhoneV3_Clean_Source/build.gradle
           test -f /tmp/light-src/LightDirectorRemote_Source/build.gradle
           test -f /tmp/phone-src/PhoneV3_Clean_Source/build.gradle
 
