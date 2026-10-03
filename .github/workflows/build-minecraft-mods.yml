@@ -31,6 +31,7 @@ jobs:
           mkdir -p /tmp/phone32
           base64 -d minecraft-mod-builds/v32/phone-v32.tar.xz.b64 > /tmp/phone32.tar.xz
           tar -xJf /tmp/phone32.tar.xz -C /tmp/phone32
+          rm -f /tmp/phone32/PhoneV3_Clean_Source/src/main/java/com/injaa/phonev3/client/PhoneV31Screen.java
           cat > /tmp/phone32/PhoneV3_Clean_Source/build.gradle <<'EOF'
           plugins {
               id 'eclipse'
