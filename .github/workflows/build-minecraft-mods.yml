@@ -31,6 +31,38 @@ jobs:
           mkdir -p /tmp/phone32
           base64 -d minecraft-mod-builds/v32/phone-v32.tar.xz.b64 > /tmp/phone32.tar.xz
           tar -xJf /tmp/phone32.tar.xz -C /tmp/phone32
+          cat > /tmp/phone32/PhoneV3_Clean_Source/build.gradle <<'EOF'
+          plugins {
+              id 'eclipse'
+              id 'idea'
+              id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+          }
+
+          group = 'com.injaa.phonev3'
+          version = '1.0.0'
+          base { archivesName = 'AdvancedPhoneV3-Addon-Forge-1.20.1' }
+
+          java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+          minecraft {
+              mappings channel: 'official', version: '1.20.1'
+              copyIdeResources = true
+          }
+
+          repositories { mavenCentral() }
+
+          dependencies {
+              minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
+          }
+
+          processResources {
+              def replaceProperties = [mod_version: project.version]
+              inputs.properties replaceProperties
+              filesMatching(['META-INF/mods.toml']) { expand replaceProperties + [project: project] }
+          }
+
+          jar.finalizedBy('reobfJar')
+          EOF
 
       - name: Reconstruct Light Director V2.1
         shell: bash
