@@ -25,7 +25,7 @@ jobs:
         with:
           gradle-version: '8.8'
 
-      - name: Reconstruct source archives
+      - name: Reconstruct base sources
         shell: bash
         run: |
           cat minecraft-mod-builds/light.parts/part00 \
@@ -40,16 +40,32 @@ jobs:
           unzip -q /tmp/light.zip -d /tmp/light-src
           unzip -q /tmp/phone.zip -d /tmp/phone-src
           cp minecraft-mod-builds/phone-overrides/build.gradle /tmp/phone-src/PhoneV3_Clean_Source/build.gradle
-          test -f /tmp/light-src/LightDirectorRemote_Source/build.gradle
-          test -f /tmp/phone-src/PhoneV3_Clean_Source/build.gradle
 
-      - name: Build Light Director Remote
+      - name: Apply Light Director V2 patches
+        shell: bash
+        run: |
+          mkdir -p /tmp/light-src/LightDirectorRemote_Source/src/main/java/com/injaa/lightdirector/registry
+          cp minecraft-mod-builds/v2patch/light/LightDirectorManager.java /tmp/light-src/LightDirectorRemote_Source/src/main/java/com/injaa/lightdirector/server/LightDirectorManager.java
+          cp minecraft-mod-builds/v2patch/light/ModCreativeTabs.java /tmp/light-src/LightDirectorRemote_Source/src/main/java/com/injaa/lightdirector/registry/ModCreativeTabs.java
+          cp minecraft-mod-builds/v2patch/light/LightDirectorMod.java /tmp/light-src/LightDirectorRemote_Source/src/main/java/com/injaa/lightdirector/LightDirectorMod.java
+
+      - name: Apply Phone V3.1 patches
+        shell: bash
+        run: |
+          mkdir -p /tmp/phone-src/PhoneV3_Clean_Source/src/main/java/com/injaa/phonev3/client
+          mkdir -p /tmp/phone-src/PhoneV3_Clean_Source/src/main/java/com/injaa/phonev3/registry
+          cp minecraft-mod-builds/v2patch/phone/PhoneV3Addon.java /tmp/phone-src/PhoneV3_Clean_Source/src/main/java/com/injaa/phonev3/PhoneV3Addon.java
+          cp minecraft-mod-builds/v2patch/phone/PhoneCreativeTab.java /tmp/phone-src/PhoneV3_Clean_Source/src/main/java/com/injaa/phonev3/registry/PhoneCreativeTab.java
+          cp minecraft-mod-builds/v2patch/phone/PhoneUpgradeHooks.java /tmp/phone-src/PhoneV3_Clean_Source/src/main/java/com/injaa/phonev3/client/PhoneUpgradeHooks.java
+          cp minecraft-mod-builds/v2patch/phone/PhoneV31Screen.java /tmp/phone-src/PhoneV3_Clean_Source/src/main/java/com/injaa/phonev3/client/PhoneV31Screen.java
+
+      - name: Build Light Director V2
         working-directory: /tmp/light-src/LightDirectorRemote_Source
-        run: gradle build --stacktrace
+        run: gradle clean build --stacktrace
 
-      - name: Build Advanced Phone V3
+      - name: Build Advanced Phone V3.1
         working-directory: /tmp/phone-src/PhoneV3_Clean_Source
-        run: gradle build --stacktrace
+        run: gradle clean build --stacktrace
 
       - name: Collect JARs
         shell: bash
@@ -62,6 +78,6 @@ jobs:
       - name: Upload JARs
         uses: actions/upload-artifact@v4
         with:
-          name: Minecraft-Mod-JARs
+          name: Minecraft-Mods-V2-V31
           path: /tmp/jars/*.jar
           if-no-files-found: error
