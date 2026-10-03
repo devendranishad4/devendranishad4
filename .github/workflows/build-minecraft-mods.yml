@@ -28,14 +28,16 @@ jobs:
       - name: Reconstruct Phone V3.2
         shell: bash
         run: |
-          base64 -d minecraft-mod-builds/v32/phone-v32.zip.b64 > /tmp/phone32.zip
-          unzip -q /tmp/phone32.zip -d /tmp/phone32
+          mkdir -p /tmp/phone32
+          base64 -d minecraft-mod-builds/v32/phone-v32.tar.xz.b64 > /tmp/phone32.tar.xz
+          tar -xJf /tmp/phone32.tar.xz -C /tmp/phone32
 
       - name: Reconstruct Light Director V2.1
         shell: bash
         run: |
-          base64 -d minecraft-mod-builds/v32/light-v21.zip.b64 > /tmp/light21.zip
-          unzip -q /tmp/light21.zip -d /tmp/light21
+          mkdir -p /tmp/light21
+          base64 -d minecraft-mod-builds/v32/light-v21.tar.xz.b64 > /tmp/light21.tar.xz
+          tar -xJf /tmp/light21.tar.xz -C /tmp/light21
 
       - name: Build Advanced Phone V3.2
         working-directory: /tmp/phone32/PhoneV3_Clean_Source
