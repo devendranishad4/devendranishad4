@@ -1,0 +1,30 @@
+name: Build Minecraft Mods
+on:
+  push:
+    branches: [ minecraft-horror-builds ]
+    paths:
+      - 'minecraft-mods/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [remote-hide, slenderman]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+      - name: Build
+        run: gradle -p minecraft-mods/${{ matrix.project }} build --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.project }}-forge-1.20.1
+          path: minecraft-mods/${{ matrix.project }}/build/libs/*.jar
+          if-no-files-found: error
