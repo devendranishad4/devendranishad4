@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "com.devendra.remotehide.mixin",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "remotehide.refmap.json",
   "client": [
     "ItemInHandRendererMixin",
     "ItemInHandLayerMixin"
