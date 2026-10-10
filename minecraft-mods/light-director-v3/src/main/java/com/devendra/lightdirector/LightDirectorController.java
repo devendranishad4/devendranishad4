@@ -296,8 +296,8 @@ public final class LightDirectorController {
 
     private static void flickerTick(ServerLevel level, State s) {
         s.ticker++;
-        ServerPlayer owner = s.owner == null ? null : level.getPlayerByUUID(s.owner);
-        double speed = owner == null ? 1.0D : getSpeed(owner);
+        net.minecraft.world.entity.player.Player owner = s.owner == null ? null : level.getPlayerByUUID(s.owner);
+        double speed = owner instanceof ServerPlayer sp ? getSpeed(sp) : 1.0D;
         int interval = Math.max(1, (int)Math.round(4.0D / speed));
         if (s.ticker % interval != 0) return;
 
