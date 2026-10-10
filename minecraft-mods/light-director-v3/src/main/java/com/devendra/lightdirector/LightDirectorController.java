@@ -102,6 +102,19 @@ public final class LightDirectorController {
         return v;
     }
 
+    public static double cycleSpeed(ServerPlayer player) {
+        double current = getSpeed(player);
+        for (int i = 0; i < SPEEDS.length; i++) {
+            if (Math.abs(SPEEDS[i] - current) < 0.0001D) {
+                double next = SPEEDS[(i + 1) % SPEEDS.length];
+                player.getPersistentData().putDouble(SPEED_KEY, next);
+                return next;
+            }
+        }
+        player.getPersistentData().putDouble(SPEED_KEY, 1.0D);
+        return 1.0D;
+    }
+
     private static double snapSpeed(double requested) {
         double best = SPEEDS[0];
         double diff = Math.abs(requested - best);
