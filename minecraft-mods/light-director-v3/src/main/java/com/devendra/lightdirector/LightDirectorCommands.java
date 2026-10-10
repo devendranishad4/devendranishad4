@@ -12,18 +12,28 @@ public final class LightDirectorCommands {
     private LightDirectorCommands() {}
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("lightdirector")
+        var root = Commands.literal("lightdirector")
                 .then(Commands.literal("blackout").executes(ctx -> blackout(ctx.getSource())))
                 .then(Commands.literal("flicker").executes(ctx -> flicker(ctx.getSource())))
                 .then(Commands.literal("restore").executes(ctx -> restore(ctx.getSource())))
                 .then(Commands.literal("stop").executes(ctx -> restore(ctx.getSource())))
                 .then(Commands.literal("status").executes(ctx -> status(ctx.getSource())))
+                .then(Commands.literal("nextrange").executes(ctx -> nextRange(ctx.getSource())))
+                .then(Commands.literal("nextspeed").executes(ctx -> nextSpeed(ctx.getSource())))
                 .then(Commands.literal("range")
                         .then(Commands.argument("blocks", IntegerArgumentType.integer(32, 2500))
                                 .executes(ctx -> range(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "blocks")))))
                 .then(Commands.literal("speed")
                         .then(Commands.argument("multiplier", DoubleArgumentType.doubleArg(0.2D, 3.0D))
-                                .executes(ctx -> speed(ctx.getSource(), DoubleArgumentType.getDouble(ctx, "multiplier"))))));
+                                .executes(ctx -> speed(ctx.getSource(), DoubleArgumentType.getDouble(ctx, "multiplier")))));
+
+        dispatcher.register(root);
+
+        dispatcher.register(Commands.literal("ld")
+                .then(Commands.literal("blackout").executes(ctx -> blackout(ctx.getSource())))
+                .then(Commands.literal("flicker").executes(ctx -> flicker(ctx.getSource())))
+                .then(Commands.literal("restore").executes(ctx -> restore(ctx.getSource())))
+                .then(Commands.literal("status").executes(ctx -> status(ctx.getSource()))));
     }
 
     private static ServerPlayer player(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -33,7 +43,7 @@ public final class LightDirectorCommands {
     private static int blackout(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer p = player(source);
         LightDirectorController.startBlackout(p);
-        source.sendSuccess(() -> Component.literal("Light Director blackout started (loaded chunks only)."), false);
+        source.sendSuccess(() -> Component.literal("Light Director blackout started."), false);
         return 1;
     }
 
@@ -54,14 +64,28 @@ public final class LightDirectorCommands {
     private static int range(CommandSourceStack source, int value) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer p = player(source);
         int snapped = LightDirectorController.setRange(p, value);
-        source.sendSuccess(() -> Component.literal("Light Director range set to " + snapped + " blocks."), false);
+        source.sendSuccess(() -> Component.literal("Light Director range: " + snapped + " blocks."), false);
         return 1;
     }
 
     private static int speed(CommandSourceStack source, double value) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer p = player(source);
         double set = LightDirectorController.setSpeed(p, value);
-        source.sendSuccess(() -> Component.literal("Light Director speed set to " + set + "x."), false);
+        source.sendSuccess(() -> Component.literal("Light Director speed: " + set + "x."), false);
+        return 1;
+    }
+
+    private static int nextRange(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer p = player(source);
+        int set = LightDirectorController.cycleRange(p);
+        source.sendSuccess(() -> Component.literal("Light Director range: " + set + " blocks."), false);
+        return 1;
+    }
+
+    private static int nextSpeed(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer p = player(source);
+        double set = LightDirectorController.cycleSpeed(p);
+        source.sendSuccess(() -> Component.literal("Light Director speed: " + set + "x."), false);
         return 1;
     }
 
