@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.devendra'
-version = '3.0.0'
+version = '3.1.0'
 base { archivesName = 'LightDirectorRemote-Forge-1.20.1' }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
